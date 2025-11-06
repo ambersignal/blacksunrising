@@ -1,11 +1,13 @@
 package main
 
 import (
+	"image"
 	"log"
+	"math"
+	"math/rand"
 	"time"
 
-	"github.com/ambersignal/blacksunrising/internal/logic"
-
+	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -15,32 +17,63 @@ const (
 	mul    = 2
 )
 
-// Logic interface defines the contract for game logic operations
-type Logic interface {
-	Update(shift time.Duration) error
-}
-
 // Game represents the main game structure
 type Game struct {
-	logic Logic
-	prev  time.Time
+	Ships []*Ship
+
+	startTime time.Time
+}
+
+// NewGame creates a new game instance
+func NewGame() *Game {
+	game := &Game{
+		startTime: time.Now(),
+	}
+
+	// Load the ship image
+	shipImg, err := LoadShipImage()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create multiple ships in random positions with random angles
+	numShips := rand.Intn(2) + 3 // Create 3-5 ships
+	for i := 0; i < numShips; i++ {
+		// Generate random position within screen bounds
+		x := rand.Intn(width-shipImg.Bounds().Dx()) + shipImg.Bounds().Dx()/2
+		y := rand.Intn(height-shipImg.Bounds().Dy()) + shipImg.Bounds().Dy()/2
+		pos := geom.FromPoint(image.Pt(x, y))
+
+		// Generate random angle (in radians)
+		angle := geom.Angle(rand.Float64() * 2 * math.Pi)
+
+		// Create ship with random position and angle
+		ship := NewShip(pos, angle, shipImg)
+		game.Ships = append(game.Ships, ship)
+	}
+
+	return game
 }
 
 // Update updates the game logic
 func (g *Game) Update() error {
-	// Delegate to the logic implementation
-	next := time.Now()
-	if err := g.logic.Update(next.Sub(g.prev)); err != nil {
-		return err
+	elapsedTime := time.Since(g.startTime)
+	// Update all ships
+	for _, ship := range g.Ships {
+		if err := ship.Update(elapsedTime); err != nil {
+			return err
+		}
 	}
-	g.prev = next
 
 	return nil
 }
 
 // Draw renders the game screen
 func (g *Game) Draw(screen *ebiten.Image) {
-	// TODO: Implement rendering logic here
+	// Draw all ships
+	for _, ship := range g.Ships {
+		ship.Draw(screen)
+	}
 }
 
 // Layout returns the game's screen size
@@ -50,13 +83,9 @@ func (g *Game) Layout(width, height int) (int, int) {
 }
 
 func main() {
-	gameLogic := &logic.Game{}
-	game := &Game{
-		logic: gameLogic,
-	}
+	game := NewGame()
 
-	// TODO: Configure Ebiten settings
-	ebiten.SetWindowSize(width*2, height*mul)
+	ebiten.SetWindowSize(width*mul, height*mul)
 	ebiten.SetWindowTitle("Black Sun Rising")
 
 	if err := ebiten.RunGame(game); err != nil {

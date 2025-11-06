@@ -47,8 +47,14 @@ func (v Vec2) Distance(u Vec2) float64 {
 	return v.Sub(u).Length()
 }
 
-func (v Vec2) Round() image.Point {
-	return image.Pt(int(math.Round(v[0])), int(math.Round(v[1])))
+func (v Vec2) Round() Vec2 {
+	return Vec2{math.Round(v[0]), math.Round(v[1])}
+}
+
+func (v Vec2) ToImagePoint() image.Point {
+	rounded := v.Round()
+
+	return image.Pt(int(rounded[0]), int(rounded[1]))
 }
 
 func (v Vec2) Dot(u Vec2) float64 {

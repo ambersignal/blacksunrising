@@ -42,8 +42,8 @@ func (r Rectangle) Size() Vec2 {
 
 func (r Rectangle) Round() Rectangle {
 	return Rectangle{
-		Min: FromPoint(r.Min.Round()),
-		Max: FromPoint(r.Max.Round()),
+		Min: r.Min.Round(),
+		Max: r.Max.Round(),
 	}
 }
 
