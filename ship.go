@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"time"
 
 	"github.com/ambersignal/blacksunrising/pkg/geom"
@@ -8,11 +9,18 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+// Global constants for ship movement limits
+const (
+	MaxSpeed         = 50.0        // Maximum speed in pixels per second
+	MaxRotationSpeed = math.Pi / 4 // Maximum rotation speed in radians per second
+)
+
 // Ship represents a ship in the game
 type Ship struct {
 	Pos   geom.Vec2
 	Image *ebiten.Image
 	Vel   geom.Vec2 // Velocity in pixels per second
+	Accel geom.Vec2 // Acceleration in pixels per second squared
 }
 
 // NewShip creates a new ship with the specified position, velocity, and image
@@ -21,6 +29,7 @@ func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 		Pos:   pos,
 		Image: img,
 		Vel:   vel,
+		Accel: geom.Vec2{0, 0},
 	}
 }
 
@@ -32,8 +41,22 @@ func LoadShipImage() (*ebiten.Image, error) {
 
 // Update updates the ship's state
 func (s *Ship) Update(elapsedTime time.Duration) error {
+	// Convert elapsed time to seconds for calculations
+	deltaSeconds := elapsedTime.Seconds()
+
+	// Update velocity based on acceleration
+	s.Vel = s.Vel.Add(s.Accel.Mul(deltaSeconds))
+
+	// Enforce maximum speed
+	if s.Vel.Length() > MaxSpeed {
+		s.Vel = s.Vel.Normalize().Mul(MaxSpeed)
+	}
+
 	// Update position based on velocity
-	s.Pos = s.Pos.Add(s.Vel.Mul(elapsedTime.Seconds()))
+	s.Pos = s.Pos.Add(s.Vel.Mul(deltaSeconds))
+
+	// Reset acceleration for next frame
+	s.Accel = geom.Vec2{0, 0}
 
 	return nil
 }
@@ -53,7 +76,8 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	opts := &ebiten.DrawImageOptions{}
 
 	// Calculate angle from velocity vector
-	angle := s.Vel.Angle()
+	// Sprites are oriented in -pi/2 angle
+	angle := s.Vel.Angle() + math.Pi/2
 
 	// Apply rotation around the center of the image
 	centerX := float64(width) / 2

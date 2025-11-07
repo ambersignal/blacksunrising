@@ -62,7 +62,15 @@ func (v Vec2) Dot(u Vec2) float64 {
 }
 
 func (v Vec2) Angle() Angle {
-	return Angle(math.Copysign(math.Acos(v[1]/v.Length()), -v[0]))
+	// Handle zero vector case
+	if v[0] == 0 && v[1] == 0 {
+		return Angle(0)
+	}
+
+	// Use Atan2 to calculate angle from positive X-axis
+	// Atan2 returns values in range [-π, π]
+	angle := math.Atan2(v[1], v[0])
+	return Angle(angle)
 }
 
 func (v Vec2) Unpack() (float64, float64) {
