@@ -36,19 +36,17 @@ func NewGame() *Game {
 		log.Fatal(err)
 	}
 
-	// Create multiple ships in random positions with random angles
+	// Create multiple ships in random positions with random velocities
 	numShips := rand.Intn(2) + 3 // Create 3-5 ships
 	for i := 0; i < numShips; i++ {
 		// Generate random position within screen bounds
-		x := rand.Intn(width-shipImg.Bounds().Dx()) + shipImg.Bounds().Dx()/2
-		y := rand.Intn(height-shipImg.Bounds().Dy()) + shipImg.Bounds().Dy()/2
-		pos := geom.FromPoint(image.Pt(x, y))
+		pos := GenerateRandomPosition(width, height, shipImg.Bounds().Dx(), shipImg.Bounds().Dy())
 
-		// Generate random angle (in radians)
-		angle := geom.Angle(rand.Float64() * 2 * math.Pi)
+		// Generate random velocity
+		velocity := GenerateRandomVelocity()
 
-		// Create ship with random position and angle
-		ship := NewShip(pos, angle, shipImg)
+		// Create ship with random position and velocity
+		ship := NewShip(pos, velocity, shipImg)
 		game.Ships = append(game.Ships, ship)
 	}
 
@@ -80,6 +78,26 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func (g *Game) Layout(width, height int) (int, int) {
 	// TODO: Define proper screen dimensions
 	return width / mul, height / mul
+}
+
+// GenerateRandomPosition creates a random position within screen bounds
+func GenerateRandomPosition(screenWidth, screenHeight, imgWidth, imgHeight int) geom.Vec2 {
+	x := rand.Intn(screenWidth-imgWidth) + imgWidth/2
+	y := rand.Intn(screenHeight-imgHeight) + imgHeight/2
+	return geom.FromPoint(image.Pt(x, y))
+}
+
+// GenerateRandomVelocity creates a random velocity vector with magnitude between 0 and 50 pixels per second
+func GenerateRandomVelocity() geom.Vec2 {
+	// Generate random velocity between 0 and 50 pixels per second
+	velMagnitude := 0.5*rand.Float64() + 0.01
+
+	// Generate random direction for velocity vector
+	velAngle := rand.Float64() * 2 * math.Pi
+	return geom.Vec2{
+		velMagnitude * math.Cos(velAngle),
+		velMagnitude * math.Sin(velAngle),
+	}
 }
 
 func main() {

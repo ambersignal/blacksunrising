@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math"
-	"math/rand"
 	"time"
 
 	"github.com/ambersignal/blacksunrising/pkg/geom"
@@ -13,28 +11,16 @@ import (
 // Ship represents a ship in the game
 type Ship struct {
 	Pos   geom.Vec2
-	Angle geom.Angle
 	Image *ebiten.Image
 	Vel   geom.Vec2 // Velocity in pixels per second
 }
 
-// NewShip creates a new ship with the specified position, angle, and image
-func NewShip(pos geom.Vec2, angle geom.Angle, img *ebiten.Image) *Ship {
-	// Generate random velocity between 0 and 0.5 pixels per second
-	velMagnitude := 3 * rand.Float64()
-
-	// Generate random direction for velocity vector
-	velAngle := rand.Float64() * 2 * math.Pi
-	velocity := geom.Vec2{
-		velMagnitude * math.Cos(velAngle),
-		velMagnitude * math.Sin(velAngle),
-	}
-
+// NewShip creates a new ship with the specified position, velocity, and image
+func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 	return &Ship{
 		Pos:   pos,
-		Angle: angle,
 		Image: img,
-		Vel:   velocity,
+		Vel:   vel,
 	}
 }
 
@@ -66,11 +52,14 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	// Create options for drawing
 	opts := &ebiten.DrawImageOptions{}
 
+	// Calculate angle from velocity vector
+	angle := s.Vel.Angle()
+
 	// Apply rotation around the center of the image
 	centerX := float64(width) / 2
 	centerY := float64(height) / 2
 	opts.GeoM.Translate(-centerX, -centerY)
-	opts.GeoM.Rotate(float64(s.Angle))
+	opts.GeoM.Rotate(float64(angle))
 	opts.GeoM.Translate(centerX, centerY)
 
 	// Set the position (center the image on the ship's position)
