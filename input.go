@@ -7,16 +7,16 @@ import (
 
 // InputHandler handles all input-related logic for the game
 type InputHandler struct {
-	game       *Game
+	state      *State
 	isDragging bool
 	dragStart  geom.Vec2
 	dragEnd    geom.Vec2
 }
 
 // NewInputHandler creates a new input handler
-func NewInputHandler(game *Game) *InputHandler {
+func NewInputHandler(state *State) *InputHandler {
 	return &InputHandler{
-		game: game,
+		state: state,
 	}
 }
 
@@ -46,14 +46,14 @@ func (ih *InputHandler) Update() {
 	}
 
 	// Check for left mouse click to set target position for the current group
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && ih.game.currentGroupIndex >= 0 {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && ih.state.CurrentGroupIndex >= 0 {
 		x, y := ebiten.CursorPosition()
 		target := geom.Vec2{float64(x), float64(y)}
 
 		// Set target for current group only
-		if ih.game.currentGroupIndex < len(ih.game.groups) {
-			ih.game.groups[ih.game.currentGroupIndex].Target = target
-			ih.game.groups[ih.game.currentGroupIndex].HasTarget = true
+		if ih.state.CurrentGroupIndex < len(ih.state.Groups) {
+			ih.state.Groups[ih.state.CurrentGroupIndex].Target = target
+			ih.state.Groups[ih.state.CurrentGroupIndex].HasTarget = true
 		}
 	}
 }
@@ -61,8 +61,8 @@ func (ih *InputHandler) Update() {
 // processSelection handles the creation of new groups based on selection
 func (ih *InputHandler) processSelection() {
 	// Clear current selection
-	for ship := range ih.game.selected {
-		delete(ih.game.selected, ship)
+	for ship := range ih.state.Selected {
+		delete(ih.state.Selected, ship)
 	}
 
 	// Determine bounding box of drag area
@@ -71,11 +71,13 @@ func (ih *InputHandler) processSelection() {
 	minY := min(ih.dragStart[1], ih.dragEnd[1])
 	maxY := max(ih.dragStart[1], ih.dragEnd[1])
 
+	// Remove selected ships from any existing groups first
+
 	// Select ships within the drag area
-	for _, ship := range ih.game.ships {
+	for _, ship := range ih.state.Ships {
 		if ship.Pos[0] >= minX && ship.Pos[0] <= maxX &&
 			ship.Pos[1] >= minY && ship.Pos[1] <= maxY {
-			ih.game.selected[ship] = true
+			ih.state.Selected[ship] = struct{}{}
 		}
 	}
 
@@ -84,15 +86,15 @@ func (ih *InputHandler) processSelection() {
 
 	// Create a new group with selected ships
 	newGroup := NewGroup()
-	for ship := range ih.game.selected {
+	for ship := range ih.state.Selected {
 		newGroup.AddShip(ship)
 	}
 
 	// Add the new group to our groups slice
-	ih.game.groups = append(ih.game.groups, newGroup)
+	ih.state.Groups = append(ih.state.Groups, newGroup)
 
 	// Set this as the current group
-	ih.game.currentGroupIndex = len(ih.game.groups) - 1
+	ih.state.CurrentGroupIndex = len(ih.state.Groups) - 1
 }
 
 // IsDragging returns whether we're currently dragging for selection
@@ -113,8 +115,8 @@ func (ih *InputHandler) DragEnd() geom.Vec2 {
 // removeFromAllGroups removes selected ships from all existing groups
 func (ih *InputHandler) removeFromAllGroups() {
 	// For each selected ship, remove it from any group it might be in
-	for ship := range ih.game.selected {
-		for _, group := range ih.game.groups {
+	for ship := range ih.state.Selected {
+		for _, group := range ih.state.Groups {
 			group.RemoveShip(ship)
 		}
 	}

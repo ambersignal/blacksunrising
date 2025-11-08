@@ -26,26 +26,22 @@ const (
 
 // Game represents the main game structure
 type Game struct {
-	ships             []*Ship
-	groups            []*Group       // Groups of ships
-	selected          map[*Ship]bool // Map of selected ships
-	currentGroupIndex int            // Index of the current group being formed
-	inputHandler      *InputHandler  // Handles input logic
+	state        *State        // Game state
+	inputHandler *InputHandler // Handles input logic
 
 	startTime time.Time
 }
 
 // NewGame creates a new game instance
 func NewGame() *Game {
+	state := NewState()
 	game := &Game{
-		startTime:         time.Now(),
-		selected:          make(map[*Ship]bool),
-		groups:            make([]*Group, 0),
-		currentGroupIndex: -1, // No group selected initially
+		startTime: time.Now(),
+		state:     state,
 	}
 
 	// Initialize input handler
-	game.inputHandler = NewInputHandler(game)
+	game.inputHandler = NewInputHandler(state)
 
 	// Load the ship image
 	shipImg, err := LoadShipImage()
@@ -64,7 +60,7 @@ func NewGame() *Game {
 
 		// Create ship with random position and velocity
 		ship := NewShip(pos, velocity, shipImg)
-		game.ships = append(game.ships, ship)
+		game.state.AddShip(ship)
 	}
 
 	return game
@@ -80,15 +76,15 @@ func (g *Game) Update() error {
 	g.inputHandler.Update()
 
 	// Sync ship selection state
-	for _, ship := range g.ships {
-		ship.IsSelected = g.selected[ship]
+	for _, ship := range g.state.Ships {
+		_, ship.IsSelected = g.state.Selected[ship]
 	}
 
 	// Clean up empty groups periodically
 	g.cleanupEmptyGroups()
 
 	// Apply steering behaviors
-	for _, ship := range g.ships {
+	for _, ship := range g.state.Ships {
 		// Calculate steering forces
 		alignForce := g.Alignment(ship)
 		separateForce := g.Separation(ship)
@@ -110,7 +106,7 @@ func (g *Game) Update() error {
 	}
 
 	// Update all ships
-	for _, ship := range g.ships {
+	for _, ship := range g.state.Ships {
 		if err := ship.Update(elapsedTime); err != nil {
 			return err
 		}
@@ -123,7 +119,7 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(backgroundColor)
 	// Draw all ships
-	for _, ship := range g.ships {
+	for _, ship := range g.state.Ships {
 		ship.Draw(screen)
 	}
 
@@ -172,7 +168,7 @@ func GenerateRandomVelocity() geom.Vec2 {
 
 // getGroupForShip returns the group that contains the ship, or nil if not in any group
 func (g *Game) getGroupForShip(ship *Ship) *Group {
-	for _, group := range g.groups {
+	for _, group := range g.state.Groups {
 		if group.Contains(ship) {
 			return group
 		}
@@ -183,23 +179,23 @@ func (g *Game) getGroupForShip(ship *Ship) *Group {
 // cleanupEmptyGroups removes groups that have no ships
 func (g *Game) cleanupEmptyGroups() {
 	// Iterate backwards to safely remove elements
-	for i := len(g.groups) - 1; i >= 0; i-- {
-		if g.groups[i].IsEmpty() {
+	for i := len(g.state.Groups) - 1; i >= 0; i-- {
+		if g.state.Groups[i].IsEmpty() {
 			// Remove the group
-			g.groups = append(g.groups[:i], g.groups[i+1:]...)
+			g.state.Groups = append(g.state.Groups[:i], g.state.Groups[i+1:]...)
 
 			// Adjust current group index if needed
-			if g.currentGroupIndex >= i && g.currentGroupIndex > 0 {
-				g.currentGroupIndex--
-			} else if g.currentGroupIndex >= len(g.groups) {
-				g.currentGroupIndex = len(g.groups) - 1
+			if g.state.CurrentGroupIndex >= i && g.state.CurrentGroupIndex > 0 {
+				g.state.CurrentGroupIndex--
+			} else if g.state.CurrentGroupIndex >= len(g.state.Groups) {
+				g.state.CurrentGroupIndex = len(g.state.Groups) - 1
 			}
 		}
 	}
 
 	// If no groups left, reset current group index
-	if len(g.groups) == 0 {
-		g.currentGroupIndex = -1
+	if len(g.state.Groups) == 0 {
+		g.state.CurrentGroupIndex = -1
 	}
 }
 
