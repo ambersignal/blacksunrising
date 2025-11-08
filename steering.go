@@ -5,17 +5,27 @@ import (
 )
 
 var (
-	MaxSeparation = 50.0
+	MaxSeparation = 48.0
 	MinSeparation = 0.0
 )
 
-// Alignment calculates alignment force for a ship based on nearby ships
+// Alignment calculates alignment force for a ship based on nearby ships in the group
 func (g *Game) Alignment(ship *Ship) geom.Vec2 {
+	// Only apply alignment if ship is in the group
+	if !g.isInGroup(ship) {
+		return geom.Vec2{0, 0}
+	}
+
+	// Need at least 2 ships in group for alignment to make sense
+	if len(g.Group) < 2 {
+		return geom.Vec2{0, 0}
+	}
+
 	sum := geom.Vec2{0, 0}
 	count := 0
 
-	// Look at all other ships
-	for _, other := range g.Ships {
+	// Look at ships in the group only
+	for _, other := range g.Group {
 		// Skip self
 		if other == ship {
 			continue
@@ -43,13 +53,23 @@ func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 	return steer
 }
 
-// Separation calculates separation force for a ship based on nearby ships
+// Separation calculates separation force for a ship based on nearby ships in the group
 func (g *Game) Separation(ship *Ship) geom.Vec2 {
+	// Only apply separation if ship is in the group
+	if !g.isInGroup(ship) {
+		return geom.Vec2{0, 0}
+	}
+
+	// Need at least 2 ships in group for separation to make sense
+	if len(g.Group) < 2 {
+		return geom.Vec2{0, 0}
+	}
+
 	var neighbors float64
 	sum := geom.Vec2{0, 0}
 
-	// Look at all other ships
-	for _, other := range g.Ships {
+	// Look at ships in the group only
+	for _, other := range g.Group {
 		// Skip self
 		if other == ship {
 			continue
@@ -84,13 +104,23 @@ func (g *Game) Separation(ship *Ship) geom.Vec2 {
 	return steer
 }
 
-// Cohesion calculates cohesion force for a ship based on nearby ships
+// Cohesion calculates cohesion force for a ship based on nearby ships in the group
 func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
+	// Only apply cohesion if ship is in the group
+	if !g.isInGroup(ship) {
+		return geom.Vec2{0, 0}
+	}
+
+	// Need at least 2 ships in group for cohesion to make sense
+	if len(g.Group) < 2 {
+		return geom.Vec2{0, 0}
+	}
+
 	sum := geom.Vec2{0, 0}
 	count := 0
 
-	// Look at all other ships
-	for _, other := range g.Ships {
+	// Look at ships in the group only
+	for _, other := range g.Group {
 		// Skip self
 		if other == ship {
 			continue
@@ -135,7 +165,7 @@ func (g *Game) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
 
 	// Normalize and scale to desired velocity
 	if desired.Length() > 0 {
-		desired = desired.Normalize().Mul(50) // Desired velocity
+		desired = desired.Normalize().Mul(MaxSpeed) // Desired velocity
 	}
 
 	// Reynolds steering: subtract current velocity to get steering force

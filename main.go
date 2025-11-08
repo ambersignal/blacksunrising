@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"log"
 	"math"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const (
@@ -19,9 +21,14 @@ const (
 
 // Game represents the main game structure
 type Game struct {
-	Ships     []*Ship
-	Target    geom.Vec2 // Target position for ships to move to
-	HasTarget bool      // Whether a target has been set
+	Ships      []*Ship
+	Target     geom.Vec2      // Target position for ships to move to
+	HasTarget  bool           // Whether a target has been set
+	Selected   map[*Ship]bool // Map of selected ships
+	Group      []*Ship        // Group of ships for collective movement
+	IsDragging bool           // Whether we're currently dragging for selection
+	DragStart  geom.Vec2      // Starting position of drag selection
+	DragEnd    geom.Vec2      // Ending position of drag selection
 
 	startTime time.Time
 }
@@ -30,6 +37,8 @@ type Game struct {
 func NewGame() *Game {
 	game := &Game{
 		startTime: time.Now(),
+		Selected:  make(map[*Ship]bool),
+		Group:     make([]*Ship, 0),
 	}
 
 	// Load the ship image
@@ -61,23 +70,55 @@ func (g *Game) Update() error {
 	elapsedTime := time.Since(g.startTime)
 	g.startTime = time.Now() // Update for next frame
 
-	// Check for mouse click to set target position
+	// Handle right mouse button for selection
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+		x, y := ebiten.CursorPosition()
+		cursorPos := geom.Vec2{float64(x), float64(y)}
+
+		if !g.IsDragging {
+			// Start dragging
+			g.IsDragging = true
+			g.DragStart = cursorPos
+			g.DragEnd = cursorPos
+		} else {
+			// Continue dragging
+			g.DragEnd = cursorPos
+		}
+	} else {
+		// Right mouse button released
+		if g.IsDragging {
+			// Add selected ships to group
+			g.updateSelection()
+			g.Group = make([]*Ship, 0, len(g.Selected))
+			for ship := range g.Selected {
+				g.Group = append(g.Group, ship)
+			}
+			g.IsDragging = false
+		}
+	}
+
+	// Sync ship selection state
+	for _, ship := range g.Ships {
+		ship.IsSelected = g.Selected[ship]
+	}
+
+	// Check for left mouse click to set target position for the group
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		g.Target = geom.Vec2{float64(x), float64(y)}
 		g.HasTarget = true
 	}
 
-	// Apply steering behaviors to all ships
+	// Apply steering behaviors
 	for _, ship := range g.Ships {
 		// Calculate steering forces
 		alignForce := g.Alignment(ship)
 		separateForce := g.Separation(ship)
 		cohesionForce := g.Cohesion(ship)
 
-		// If we have a target, add a seek force
+		// If we have a target and ship is in the group, add a seek force
 		var seekForce geom.Vec2
-		if g.HasTarget {
+		if g.HasTarget && g.isInGroup(ship) {
 			seekForce = g.Seek(ship, g.Target)
 		}
 
@@ -105,6 +146,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, ship := range g.Ships {
 		ship.Draw(screen)
 	}
+
+	// Draw selection rectangle if dragging
+	if g.IsDragging {
+		// Draw a rectangle from DragStart to DragEnd
+		minX := math.Min(g.DragStart[0], g.DragEnd[0])
+		maxX := math.Max(g.DragStart[0], g.DragEnd[0])
+		minY := math.Min(g.DragStart[1], g.DragEnd[1])
+		maxY := math.Max(g.DragStart[1], g.DragEnd[1])
+
+		// Create a simple rectangle visualization using vector.StrokeLine
+		vector.StrokeLine(screen, float32(minX), float32(minY), float32(maxX), float32(minY), 2, color.RGBA{0, 255, 0, 255}, false) // Top
+		vector.StrokeLine(screen, float32(minX), float32(maxY), float32(maxX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Bottom
+		vector.StrokeLine(screen, float32(minX), float32(minY), float32(minX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Left
+		vector.StrokeLine(screen, float32(maxX), float32(minY), float32(maxX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Right
+	}
 }
 
 // Layout returns the game's screen size
@@ -130,6 +186,38 @@ func GenerateRandomVelocity() geom.Vec2 {
 	return geom.Vec2{
 		velMagnitude * math.Cos(velAngle),
 		velMagnitude * math.Sin(velAngle),
+	}
+}
+
+// isInGroup checks if a ship is part of the current group
+func (g *Game) isInGroup(ship *Ship) bool {
+	for _, groupShip := range g.Group {
+		if groupShip == ship {
+			return true
+		}
+	}
+	return false
+}
+
+// updateSelection updates the selected ships based on the drag area
+func (g *Game) updateSelection() {
+	// Clear current selection
+	for ship := range g.Selected {
+		delete(g.Selected, ship)
+	}
+
+	// Determine bounding box of drag area
+	minX := math.Min(g.DragStart[0], g.DragEnd[0])
+	maxX := math.Max(g.DragStart[0], g.DragEnd[0])
+	minY := math.Min(g.DragStart[1], g.DragEnd[1])
+	maxY := math.Max(g.DragStart[1], g.DragEnd[1])
+
+	// Select ships within the drag area
+	for _, ship := range g.Ships {
+		if ship.Pos[0] >= minX && ship.Pos[0] <= maxX &&
+			ship.Pos[1] >= minY && ship.Pos[1] <= maxY {
+			g.Selected[ship] = true
+		}
 	}
 }
 

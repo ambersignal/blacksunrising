@@ -1,35 +1,39 @@
 package main
 
 import (
+	"image/color"
 	"math"
 	"time"
 
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Global constants for ship movement limits
 const (
-	MaxSpeed         = 50.0        // Maximum speed in pixels per second
+	MaxSpeed         = 128.0       // Maximum speed in pixels per second
 	MaxRotationSpeed = math.Pi / 4 // Maximum rotation speed in radians per second
 )
 
 // Ship represents a ship in the game
 type Ship struct {
-	Pos   geom.Vec2
-	Image *ebiten.Image
-	Vel   geom.Vec2 // Velocity in pixels per second
-	Accel geom.Vec2 // Acceleration in pixels per second squared
+	Pos        geom.Vec2
+	Image      *ebiten.Image
+	Vel        geom.Vec2 // Velocity in pixels per second
+	Accel      geom.Vec2 // Acceleration in pixels per second squared
+	IsSelected bool      // Whether this ship is currently selected
 }
 
 // NewShip creates a new ship with the specified position, velocity, and image
 func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 	return &Ship{
-		Pos:   pos,
-		Image: img,
-		Vel:   vel,
-		Accel: geom.Vec2{0, 0},
+		Pos:        pos,
+		Image:      img,
+		Vel:        vel,
+		Accel:      geom.Vec2{0, 0},
+		IsSelected: false,
 	}
 }
 
@@ -91,4 +95,12 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 
 	// Draw the image
 	screen.DrawImage(s.Image, opts)
+
+	// Draw selection indicator if selected
+	if s.IsSelected {
+		// Draw a circle around the ship
+		radius := float32(math.Max(float64(width), float64(height)))/2 + 10
+		vector.StrokeCircle(screen, float32(s.Pos[0]+centerX), float32(s.Pos[1]+centerY),
+			radius, 2, color.RGBA{0, 255, 0, 255}, false)
+	}
 }
