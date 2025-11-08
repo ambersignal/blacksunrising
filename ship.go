@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image/color"
 	"math"
 	"time"
 
@@ -39,7 +38,7 @@ func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 
 // LoadShipImage loads the ship image from file
 func LoadShipImage() (*ebiten.Image, error) {
-	img, _, err := ebitenutil.NewImageFromFile("data/ship.png")
+	img, _, err := ebitenutil.NewImageFromFile("data/fighter.png")
 	return img, err
 }
 
@@ -101,6 +100,6 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 		// Draw a circle around the ship
 		radius := float32(math.Max(float64(width), float64(height)))/2 + 10
 		vector.StrokeCircle(screen, float32(s.Pos[0]+centerX), float32(s.Pos[1]+centerY),
-			radius, 2, color.RGBA{0, 255, 0, 255}, false)
+			radius, 1, selectionColor, false)
 	}
 }

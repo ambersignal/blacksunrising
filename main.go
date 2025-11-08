@@ -13,6 +13,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
+var (
+	selectionColor  = color.RGBA{30, 188, 115, 255}
+	backgroundColor = color.RGBA{15, 13, 14, 255}
+)
+
 const (
 	width  = 640
 	height = 360
@@ -21,14 +26,15 @@ const (
 
 // Game represents the main game structure
 type Game struct {
-	Ships      []*Ship
-	Target     geom.Vec2      // Target position for ships to move to
-	HasTarget  bool           // Whether a target has been set
-	Selected   map[*Ship]bool // Map of selected ships
-	Group      []*Ship        // Group of ships for collective movement
-	IsDragging bool           // Whether we're currently dragging for selection
-	DragStart  geom.Vec2      // Starting position of drag selection
-	DragEnd    geom.Vec2      // Ending position of drag selection
+	Ships             []*Ship
+	Groups            [][]*Ship      // Multiple groups of ships
+	Targets           []geom.Vec2    // Targets for each group
+	HasTarget         []bool         // Whether each group has a target
+	Selected          map[*Ship]bool // Map of selected ships
+	CurrentGroupIndex int            // Index of the current group being formed
+	IsDragging        bool           // Whether we're currently dragging for selection
+	DragStart         geom.Vec2      // Starting position of drag selection
+	DragEnd           geom.Vec2      // Ending position of drag selection
 
 	startTime time.Time
 }
@@ -36,9 +42,12 @@ type Game struct {
 // NewGame creates a new game instance
 func NewGame() *Game {
 	game := &Game{
-		startTime: time.Now(),
-		Selected:  make(map[*Ship]bool),
-		Group:     make([]*Ship, 0),
+		startTime:         time.Now(),
+		Selected:          make(map[*Ship]bool),
+		Groups:            make([][]*Ship, 0),
+		Targets:           make([]geom.Vec2, 0),
+		HasTarget:         make([]bool, 0),
+		CurrentGroupIndex: -1, // No group selected initially
 	}
 
 	// Load the ship image
@@ -87,12 +96,26 @@ func (g *Game) Update() error {
 	} else {
 		// Right mouse button released
 		if g.IsDragging {
-			// Add selected ships to group
+			// Add selected ships to a new group
 			g.updateSelection()
-			g.Group = make([]*Ship, 0, len(g.Selected))
+
+			// Remove selected ships from any existing groups
+			g.removeShipsFromAllGroups()
+
+			// Create a new group with selected ships
+			newGroup := make([]*Ship, 0, len(g.Selected))
 			for ship := range g.Selected {
-				g.Group = append(g.Group, ship)
+				newGroup = append(newGroup, ship)
 			}
+
+			// Add the new group to our groups slice
+			g.Groups = append(g.Groups, newGroup)
+			g.Targets = append(g.Targets, geom.Vec2{0, 0})
+			g.HasTarget = append(g.HasTarget, false)
+
+			// Set this as the current group
+			g.CurrentGroupIndex = len(g.Groups) - 1
+
 			g.IsDragging = false
 		}
 	}
@@ -102,11 +125,19 @@ func (g *Game) Update() error {
 		ship.IsSelected = g.Selected[ship]
 	}
 
-	// Check for left mouse click to set target position for the group
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	// Clean up empty groups periodically
+	g.cleanupEmptyGroups()
+
+	// Check for left mouse click to set target position for the current group
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && g.CurrentGroupIndex >= 0 {
 		x, y := ebiten.CursorPosition()
-		g.Target = geom.Vec2{float64(x), float64(y)}
-		g.HasTarget = true
+		target := geom.Vec2{float64(x), float64(y)}
+
+		// Set target for current group only
+		if g.CurrentGroupIndex < len(g.Targets) {
+			g.Targets[g.CurrentGroupIndex] = target
+			g.HasTarget[g.CurrentGroupIndex] = true
+		}
 	}
 
 	// Apply steering behaviors
@@ -116,10 +147,11 @@ func (g *Game) Update() error {
 		separateForce := g.Separation(ship)
 		cohesionForce := g.Cohesion(ship)
 
-		// If we have a target and ship is in the group, add a seek force
+		// If we have a target and ship is in a group, add a seek force
 		var seekForce geom.Vec2
-		if g.HasTarget && g.isInGroup(ship) {
-			seekForce = g.Seek(ship, g.Target)
+		groupIndex := g.getGroupIndexForShip(ship)
+		if groupIndex >= 0 && groupIndex < len(g.HasTarget) && g.HasTarget[groupIndex] {
+			seekForce = g.Seek(ship, g.Targets[groupIndex])
 		}
 
 		// Apply forces to ship's acceleration
@@ -142,6 +174,7 @@ func (g *Game) Update() error {
 
 // Draw renders the game screen
 func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(backgroundColor)
 	// Draw all ships
 	for _, ship := range g.Ships {
 		ship.Draw(screen)
@@ -156,10 +189,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		maxY := math.Max(g.DragStart[1], g.DragEnd[1])
 
 		// Create a simple rectangle visualization using vector.StrokeLine
-		vector.StrokeLine(screen, float32(minX), float32(minY), float32(maxX), float32(minY), 2, color.RGBA{0, 255, 0, 255}, false) // Top
-		vector.StrokeLine(screen, float32(minX), float32(maxY), float32(maxX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Bottom
-		vector.StrokeLine(screen, float32(minX), float32(minY), float32(minX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Left
-		vector.StrokeLine(screen, float32(maxX), float32(minY), float32(maxX), float32(maxY), 2, color.RGBA{0, 255, 0, 255}, false) // Right
+		vector.StrokeRect(screen, float32(minX), float32(minY),
+			float32(maxX-minX), float32(maxY-minY), 1, selectionColor, false)
 	}
 }
 
@@ -173,6 +204,7 @@ func (g *Game) Layout(width, height int) (int, int) {
 func GenerateRandomPosition(screenWidth, screenHeight, imgWidth, imgHeight int) geom.Vec2 {
 	x := rand.Intn(screenWidth-imgWidth) + imgWidth/2
 	y := rand.Intn(screenHeight-imgHeight) + imgHeight/2
+
 	return geom.FromPoint(image.Pt(x, y))
 }
 
@@ -189,14 +221,70 @@ func GenerateRandomVelocity() geom.Vec2 {
 	}
 }
 
-// isInGroup checks if a ship is part of the current group
-func (g *Game) isInGroup(ship *Ship) bool {
-	for _, groupShip := range g.Group {
-		if groupShip == ship {
-			return true
+// isInAnyGroup checks if a ship is part of any group
+func (g *Game) isInAnyGroup(ship *Ship) bool {
+	for _, group := range g.Groups {
+		for _, groupShip := range group {
+			if groupShip == ship {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+// getGroupIndexForShip returns the index of the group that contains the ship, or -1 if not in any group
+func (g *Game) getGroupIndexForShip(ship *Ship) int {
+	for i, group := range g.Groups {
+		for _, groupShip := range group {
+			if groupShip == ship {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+// removeShipsFromAllGroups removes selected ships from all existing groups
+func (g *Game) removeShipsFromAllGroups() {
+	// For each selected ship, remove it from any group it might be in
+	for ship := range g.Selected {
+		for i := range g.Groups {
+			// Create a new slice without the selected ship
+			newGroup := make([]*Ship, 0, len(g.Groups[i]))
+			for _, groupShip := range g.Groups[i] {
+				if groupShip != ship {
+					newGroup = append(newGroup, groupShip)
+				}
+			}
+			g.Groups[i] = newGroup
+		}
+	}
+}
+
+// cleanupEmptyGroups removes groups that have no ships
+func (g *Game) cleanupEmptyGroups() {
+	// Iterate backwards to safely remove elements
+	for i := len(g.Groups) - 1; i >= 0; i-- {
+		if len(g.Groups[i]) == 0 {
+			// Remove the group
+			g.Groups = append(g.Groups[:i], g.Groups[i+1:]...)
+			g.Targets = append(g.Targets[:i], g.Targets[i+1:]...)
+			g.HasTarget = append(g.HasTarget[:i], g.HasTarget[i+1:]...)
+
+			// Adjust current group index if needed
+			if g.CurrentGroupIndex >= i && g.CurrentGroupIndex > 0 {
+				g.CurrentGroupIndex--
+			} else if g.CurrentGroupIndex >= len(g.Groups) {
+				g.CurrentGroupIndex = len(g.Groups) - 1
+			}
+		}
+	}
+
+	// If no groups left, reset current group index
+	if len(g.Groups) == 0 {
+		g.CurrentGroupIndex = -1
+	}
 }
 
 // updateSelection updates the selected ships based on the drag area
@@ -224,7 +312,8 @@ func (g *Game) updateSelection() {
 func main() {
 	game := NewGame()
 
-	ebiten.SetWindowSize(width*mul, height*mul)
+	// ebiten.SetWindowSize(width*mul, height*mul)
+	ebiten.SetFullscreen(true)
 	ebiten.SetWindowTitle("Black Sun Rising")
 
 	if err := ebiten.RunGame(game); err != nil {

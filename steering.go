@@ -9,23 +9,26 @@ var (
 	MinSeparation = 0.0
 )
 
-// Alignment calculates alignment force for a ship based on nearby ships in the group
+// Alignment calculates alignment force for a ship based on nearby ships in the same group
 func (g *Game) Alignment(ship *Ship) geom.Vec2 {
-	// Only apply alignment if ship is in the group
-	if !g.isInGroup(ship) {
+	// Find which group this ship belongs to
+	groupIndex := g.getGroupIndexForShip(ship)
+
+	// Only apply alignment if ship is in a group
+	if groupIndex == -1 {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for alignment to make sense
-	if len(g.Group) < 2 {
+	if len(g.Groups[groupIndex]) < 2 {
 		return geom.Vec2{0, 0}
 	}
 
 	sum := geom.Vec2{0, 0}
 	count := 0
 
-	// Look at ships in the group only
-	for _, other := range g.Group {
+	// Look at ships in the same group only
+	for _, other := range g.Groups[groupIndex] {
 		// Skip self
 		if other == ship {
 			continue
@@ -53,23 +56,26 @@ func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 	return steer
 }
 
-// Separation calculates separation force for a ship based on nearby ships in the group
+// Separation calculates separation force for a ship based on nearby ships in the same group
 func (g *Game) Separation(ship *Ship) geom.Vec2 {
-	// Only apply separation if ship is in the group
-	if !g.isInGroup(ship) {
+	// Find which group this ship belongs to
+	groupIndex := g.getGroupIndexForShip(ship)
+
+	// Only apply separation if ship is in a group
+	if groupIndex == -1 {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for separation to make sense
-	if len(g.Group) < 2 {
+	if len(g.Groups[groupIndex]) < 2 {
 		return geom.Vec2{0, 0}
 	}
 
 	var neighbors float64
 	sum := geom.Vec2{0, 0}
 
-	// Look at ships in the group only
-	for _, other := range g.Group {
+	// Look at ships in the same group only
+	for _, other := range g.Groups[groupIndex] {
 		// Skip self
 		if other == ship {
 			continue
@@ -104,23 +110,26 @@ func (g *Game) Separation(ship *Ship) geom.Vec2 {
 	return steer
 }
 
-// Cohesion calculates cohesion force for a ship based on nearby ships in the group
+// Cohesion calculates cohesion force for a ship based on nearby ships in the same group
 func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
-	// Only apply cohesion if ship is in the group
-	if !g.isInGroup(ship) {
+	// Find which group this ship belongs to
+	groupIndex := g.getGroupIndexForShip(ship)
+
+	// Only apply cohesion if ship is in a group
+	if groupIndex == -1 {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for cohesion to make sense
-	if len(g.Group) < 2 {
+	if len(g.Groups[groupIndex]) < 2 {
 		return geom.Vec2{0, 0}
 	}
 
 	sum := geom.Vec2{0, 0}
 	count := 0
 
-	// Look at ships in the group only
-	for _, other := range g.Group {
+	// Look at ships in the same group only
+	for _, other := range g.Groups[groupIndex] {
 		// Skip self
 		if other == ship {
 			continue
