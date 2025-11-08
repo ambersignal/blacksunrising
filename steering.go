@@ -12,15 +12,15 @@ var (
 // Alignment calculates alignment force for a ship based on nearby ships in the same group
 func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	groupIndex := g.getGroupIndexForShip(ship)
+	group := g.getGroupForShip(ship)
 
 	// Only apply alignment if ship is in a group
-	if groupIndex == -1 {
+	if group == nil {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for alignment to make sense
-	if len(g.Groups[groupIndex]) < 2 {
+	if group.Size() < 2 {
 		return geom.Vec2{0, 0}
 	}
 
@@ -28,7 +28,7 @@ func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 	count := 0
 
 	// Look at ships in the same group only
-	for _, other := range g.Groups[groupIndex] {
+	for _, other := range group.Ships {
 		// Skip self
 		if other == ship {
 			continue
@@ -59,15 +59,15 @@ func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 // Separation calculates separation force for a ship based on nearby ships in the same group
 func (g *Game) Separation(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	groupIndex := g.getGroupIndexForShip(ship)
+	group := g.getGroupForShip(ship)
 
 	// Only apply separation if ship is in a group
-	if groupIndex == -1 {
+	if group == nil {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for separation to make sense
-	if len(g.Groups[groupIndex]) < 2 {
+	if group.Size() < 2 {
 		return geom.Vec2{0, 0}
 	}
 
@@ -75,7 +75,7 @@ func (g *Game) Separation(ship *Ship) geom.Vec2 {
 	sum := geom.Vec2{0, 0}
 
 	// Look at ships in the same group only
-	for _, other := range g.Groups[groupIndex] {
+	for _, other := range group.Ships {
 		// Skip self
 		if other == ship {
 			continue
@@ -113,15 +113,15 @@ func (g *Game) Separation(ship *Ship) geom.Vec2 {
 // Cohesion calculates cohesion force for a ship based on nearby ships in the same group
 func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	groupIndex := g.getGroupIndexForShip(ship)
+	group := g.getGroupForShip(ship)
 
 	// Only apply cohesion if ship is in a group
-	if groupIndex == -1 {
+	if group == nil {
 		return geom.Vec2{0, 0}
 	}
 
 	// Need at least 2 ships in group for cohesion to make sense
-	if len(g.Groups[groupIndex]) < 2 {
+	if group.Size() < 2 {
 		return geom.Vec2{0, 0}
 	}
 
@@ -129,7 +129,7 @@ func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
 	count := 0
 
 	// Look at ships in the same group only
-	for _, other := range g.Groups[groupIndex] {
+	for _, other := range group.Ships {
 		// Skip self
 		if other == ship {
 			continue
