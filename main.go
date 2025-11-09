@@ -2,17 +2,33 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"log/slog"
 	"os"
 
 	"github.com/ambersignal/blacksunrising/internal/scene"
+	"github.com/ambersignal/blacksunrising/pkg/loader"
+	"github.com/ebitenui/ebitenui"
+	"github.com/ebitenui/ebitenui/widget"
 	"github.com/hajimehoshi/ebiten/v2"
+)
+
+type GameState int
+
+const (
+	GameStateMainMenu GameState = iota
+	GameStateLaunched
+	GameStateTerminated
 )
 
 const (
 	width  = 640
 	height = 360
 	mul    = 2
+)
+
+var (
+	BackgroundColor = color.RGBA{15, 13, 14, 255}
 )
 
 // Scene represents a game scene
@@ -23,7 +39,9 @@ type Scene interface {
 
 // Game represents the main game structure that implements ebiten.Game interface
 type Game struct {
+	ui    *ebitenui.UI
 	scene Scene
+	state GameState
 }
 
 // NewGame creates a new game instance
@@ -35,12 +53,28 @@ func NewGame(scene Scene) *Game {
 
 // Update updates the game logic
 func (g *Game) Update() error {
-	return g.scene.Update()
+	switch g.state {
+	case GameStateMainMenu:
+		g.ui.Update()
+	case GameStateLaunched:
+		g.scene.Update()
+	case GameStateTerminated:
+		return ebiten.Termination
+	}
+
+	return nil
 }
 
 // Draw renders the game screen
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.scene.Draw(screen)
+	screen.Fill(BackgroundColor)
+
+	switch g.state {
+	case GameStateMainMenu:
+		g.ui.Draw(screen)
+	case GameStateLaunched:
+		g.scene.Draw(screen)
+	}
 }
 
 // Layout returns the game's screen size
@@ -56,6 +90,35 @@ func run() error {
 	}
 
 	game := NewGame(scene)
+
+	loader := loader.NewLoader("./data")
+	rndrCtx := RenderContext{
+		Loader: loader,
+	}
+
+	root := Root{
+		Menu{
+			MenuButton{
+				Text: "New Game",
+				OnPress: func(args *widget.ButtonClickedEventArgs) {
+					game.state = GameStateLaunched
+				},
+			},
+			menuButton("Load Game"),
+			MenuButton{
+				Text: "Exit",
+				OnPress: func(args *widget.ButtonClickedEventArgs) {
+					game.state = GameStateTerminated
+				},
+			},
+		},
+	}
+
+	ui, err := root.Build(rndrCtx)
+	if err != nil {
+		return fmt.Errorf("prepare UI builder: %w", err)
+	}
+	game.ui = ui
 
 	// ebiten.SetWindowSize(width*mul, height*mul)
 	ebiten.SetFullscreen(true)

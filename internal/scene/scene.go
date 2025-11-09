@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	SelectionColor  = color.RGBA{30, 188, 115, 255}
-	BackgroundColor = color.RGBA{15, 13, 14, 255}
+	SelectionColor = color.RGBA{30, 188, 115, 255}
 )
 
 // Scene represents the main game scene
@@ -116,7 +115,6 @@ func (g *Scene) Update() error {
 
 // Draw renders the game screen
 func (g *Scene) Draw(screen *ebiten.Image) {
-	screen.Fill(BackgroundColor)
 	// Draw all ships
 	for _, ship := range g.state.Ships {
 		ship.Draw(screen)
