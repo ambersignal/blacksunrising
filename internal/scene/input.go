@@ -1,6 +1,8 @@
-package main
+package scene
 
 import (
+	"math"
+
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -66,10 +68,10 @@ func (ih *InputHandler) processSelection() {
 	}
 
 	// Determine bounding box of drag area
-	minX := min(ih.dragStart[0], ih.dragEnd[0])
-	maxX := max(ih.dragStart[0], ih.dragEnd[0])
-	minY := min(ih.dragStart[1], ih.dragEnd[1])
-	maxY := max(ih.dragStart[1], ih.dragEnd[1])
+	minX := math.Min(ih.dragStart[0], ih.dragEnd[0])
+	maxX := math.Max(ih.dragStart[0], ih.dragEnd[0])
+	minY := math.Min(ih.dragStart[1], ih.dragEnd[1])
+	maxY := math.Max(ih.dragStart[1], ih.dragEnd[1])
 
 	// Remove selected ships from any existing groups first
 

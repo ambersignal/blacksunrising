@@ -1,4 +1,4 @@
-package main
+package scene
 
 import (
 	"github.com/ambersignal/blacksunrising/pkg/geom"

@@ -1,4 +1,4 @@
-package main
+package scene
 
 import (
 	"github.com/ambersignal/blacksunrising/pkg/geom"
@@ -10,7 +10,7 @@ var (
 )
 
 // Alignment calculates alignment force for a ship based on nearby ships in the same group
-func (g *Game) Alignment(ship *Ship) geom.Vec2 {
+func (g *Scene) Alignment(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.getGroupForShip(ship)
 
@@ -57,7 +57,7 @@ func (g *Game) Alignment(ship *Ship) geom.Vec2 {
 }
 
 // Separation calculates separation force for a ship based on nearby ships in the same group
-func (g *Game) Separation(ship *Ship) geom.Vec2 {
+func (g *Scene) Separation(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.getGroupForShip(ship)
 
@@ -111,7 +111,7 @@ func (g *Game) Separation(ship *Ship) geom.Vec2 {
 }
 
 // Cohesion calculates cohesion force for a ship based on nearby ships in the same group
-func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
+func (g *Scene) Cohesion(ship *Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.getGroupForShip(ship)
 
@@ -162,7 +162,7 @@ func (g *Game) Cohesion(ship *Ship) geom.Vec2 {
 }
 
 // Seek calculates a steering force to move a ship toward a target position
-func (g *Game) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
+func (g *Scene) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
 	// Calculate desired velocity toward target
 	desired := target.Sub(ship.Pos)
 
@@ -180,22 +180,4 @@ func (g *Game) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
 	// Reynolds steering: subtract current velocity to get steering force
 	steer := desired.Sub(ship.Vel)
 	return steer
-}
-
-func SmoothStep(edge0, edge1, x float64) float64 {
-	t := Clamp((x-edge0)/(edge1-edge0), 0.0, 1.0)
-
-	return t * t * (3 - 2*t)
-}
-
-func Clamp(x, low, high float64) float64 {
-	if x < low {
-		return low
-	}
-
-	if x > high {
-		return high
-	}
-
-	return x
 }

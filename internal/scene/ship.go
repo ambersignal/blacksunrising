@@ -1,6 +1,7 @@
-package main
+package scene
 
 import (
+	"image/color"
 	"math"
 	"time"
 
@@ -8,6 +9,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+)
+
+var (
+	selectionColor = color.RGBA{30, 188, 115, 255}
 )
 
 // Global constants for ship movement limits

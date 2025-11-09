@@ -1,4 +1,4 @@
-package main
+package scene
 
 // State holds all the game state information
 type State struct {
