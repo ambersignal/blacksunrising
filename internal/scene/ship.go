@@ -95,7 +95,7 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	opts.GeoM.Translate(centerX, centerY)
 
 	// Set the position (center the image on the ship's position)
-	opts.GeoM.Translate(s.Pos[0], s.Pos[1])
+	opts.GeoM.Translate(math.Round(s.Pos[0]), math.Round(s.Pos[1]))
 
 	// Draw the image
 	screen.DrawImage(s.Image, opts)
@@ -103,8 +103,9 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	// Draw selection indicator if selected
 	if s.IsSelected {
 		// Draw a circle around the ship
-		radius := float32(math.Max(float64(width), float64(height)))/2 + 10
-		vector.StrokeCircle(screen, float32(s.Pos[0]+centerX), float32(s.Pos[1]+centerY),
+		radius := float32(math.Max(float64(width), float64(height))) / 2
+		vector.StrokeCircle(screen, float32(math.Round((s.Pos[0] + centerX))),
+			float32(math.Round(s.Pos[1]+centerY)),
 			radius, 1, selectionColor, false)
 	}
 }

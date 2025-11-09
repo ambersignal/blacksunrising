@@ -11,7 +11,7 @@ Black Sun Rising is a RTS game that's writen in Go language and the Ebiten engin
 
 - Define interfaces in the place of using.
 - Avoid using log package, use slog instead.
-- Don't use os.Exit outside main function.
+- Don't use os.Exit outside the main function.
 
 ## Architecture
 

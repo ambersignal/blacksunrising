@@ -192,12 +192,6 @@ func (g *Scene) cleanupEmptyGroups() {
 	}
 }
 
-// Layout returns the game's screen size
-func (g *Scene) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	// TODO: Define proper screen dimensions
-	return g.width / g.mul, g.height / g.mul
-}
-
 func SmoothStep(edge0, edge1, x float64) float64 {
 	t := Clamp((x-edge0)/(edge1-edge0), 0.0, 1.0)
 
