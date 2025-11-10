@@ -84,7 +84,7 @@ func (g *Game) Layout(w, h int) (int, int) {
 }
 
 func run() error {
-	scene, err := scene.NewScene()
+	scene, err := scene.NewScene(640, 360)
 	if err != nil {
 		return fmt.Errorf("scene initialization: %w", err)
 	}

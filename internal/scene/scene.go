@@ -24,18 +24,16 @@ type Scene struct {
 
 	width  int
 	height int
-	mul    int
 }
 
 // NewScene creates a new game scene
-func NewScene() (*Scene, error) {
+func NewScene(width, height int) (*Scene, error) {
 	state := NewState()
 	scene := &Scene{
 		startTime: time.Now(),
 		state:     state,
-		width:     640,
-		height:    360,
-		mul:       2,
+		width:     width,
+		height:    height,
 	}
 
 	// Initialize input handler

@@ -76,3 +76,17 @@ func (v Vec2) Angle() Angle {
 func (v Vec2) Unpack() (float64, float64) {
 	return v[0], v[1]
 }
+
+func MinVec2(u, v Vec2) Vec2 {
+	return Vec2{
+		math.Min(u[0], v[0]),
+		math.Min(u[1], v[1]),
+	}
+}
+
+func MaxVec2(u, v Vec2) Vec2 {
+	return Vec2{
+		math.Max(u[0], v[0]),
+		math.Max(u[1], v[1]),
+	}
+}

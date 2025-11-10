@@ -2,6 +2,7 @@ package geom
 
 import (
 	"image"
+	"math"
 )
 
 type Rectangle struct {
@@ -59,4 +60,25 @@ func Rect(x, y, w, h float64) Rectangle {
 		Min: Vec2{x, y},
 		Max: Vec2{x + w, y + h},
 	}
+}
+
+func (r Rectangle) Normalize() Rectangle {
+	return Rectangle{
+		Min: MinVec2(r.Min, r.Max),
+		Max: MaxVec2(r.Min, r.Max),
+	}
+}
+
+// IntersectsCircle checks if the rectangle intersects with a circle centered at center with given radius
+func (r Rectangle) IntersectsCircle(center Vec2, radius float64) bool {
+	// Find the closest point on the rectangle to the circle center
+	closestX := math.Max(r.Min[0], math.Min(center[0], r.Max[0]))
+	closestY := math.Max(r.Min[1], math.Min(center[1], r.Max[1]))
+
+	// Calculate distance between closest point and circle center
+	distanceX := center[0] - closestX
+	distanceY := center[1] - closestY
+
+	// If distance is less than radius, they intersect
+	return (distanceX*distanceX + distanceY*distanceY) < (radius * radius)
 }

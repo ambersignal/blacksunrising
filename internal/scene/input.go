@@ -68,17 +68,18 @@ func (ih *InputHandler) processSelection() {
 	}
 
 	// Determine bounding box of drag area
-	minX := math.Min(ih.dragStart[0], ih.dragEnd[0])
-	maxX := math.Max(ih.dragStart[0], ih.dragEnd[0])
-	minY := math.Min(ih.dragStart[1], ih.dragEnd[1])
-	maxY := math.Max(ih.dragStart[1], ih.dragEnd[1])
-
-	// Remove selected ships from any existing groups first
+	selection := geom.Rectangle{
+		Min: ih.dragStart,
+		Max: ih.dragEnd,
+	}
+	selection = selection.Normalize()
 
 	// Select ships within the drag area
 	for _, ship := range ih.state.Ships {
-		if ship.Pos[0] >= minX && ship.Pos[0] <= maxX &&
-			ship.Pos[1] >= minY && ship.Pos[1] <= maxY {
+		shipSize := ship.Image.Bounds().Size()
+		radius := math.Max(float64(shipSize.X), float64(shipSize.Y))
+
+		if selection.IntersectsCircle(ship.Pos, radius) {
 			ih.state.Selected[ship] = struct{}{}
 		}
 	}
