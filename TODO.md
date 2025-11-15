@@ -1,0 +1,11 @@
+- [ ] Avoidance for the bound of the map
+- [x] Camera
+- [ ] Minimap
+- [ ] Control menu
+- [ ] Music
+- [ ] Different type of the ships
+- [ ] Building of the new ships
+- [ ] Background
+- [ ] Sun
+- [ ] Asteroids
+- [ ] Resource collection

@@ -21,19 +21,19 @@ type Scene struct {
 	inputHandler *InputHandler
 
 	startTime time.Time
-
-	width  int
-	height int
 }
 
 // NewScene creates a new game scene
-func NewScene(width, height int) (*Scene, error) {
+func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	state := NewState()
+	state.Camera = geom.Rectangle{
+		Max: cameraSize,
+	}
+	state.WorldSize = worldSize
+
 	scene := &Scene{
 		startTime: time.Now(),
 		state:     state,
-		width:     width,
-		height:    height,
 	}
 
 	// Initialize input handler
@@ -46,10 +46,11 @@ func NewScene(width, height int) (*Scene, error) {
 	}
 
 	// Create multiple ships in random positions with random velocities
-	numShips := rand.Intn(5) + 5 // Create 5-9 ships
+	numShips := rand.Intn(11) + 10 // Create 10-20 ships
 	for i := 0; i < numShips; i++ {
-		// Generate random position within screen bounds
-		pos := GenerateRandomPosition(640, 360, shipImg.Bounds().Dx(), shipImg.Bounds().Dy())
+		// Generate random position within world bounds
+		pos := generateRandomPosition(worldSize,
+			geom.FromPoint(shipImg.Bounds().Min))
 
 		// Generate random velocity
 		velocity := GenerateRandomVelocity()
@@ -69,7 +70,9 @@ func (g *Scene) Update() error {
 	g.startTime = time.Now() // Update for next frame
 
 	// Handle input
-	g.inputHandler.Update()
+	if err := g.inputHandler.Update(); err != nil {
+		return err
+	}
 
 	// Sync ship selection state
 	for _, ship := range g.state.Ships {
@@ -113,33 +116,48 @@ func (g *Scene) Update() error {
 
 // Draw renders the game screen
 func (g *Scene) Draw(screen *ebiten.Image) {
-	// Draw all ships
+	// Draw all ships that are within the camera view
 	for _, ship := range g.state.Ships {
-		ship.Draw(screen)
+		// Check if ship is within camera view
+		if g.isShipInView(ship, g.state.Camera) {
+			// Draw ship with camera offset
+			ship.Draw(screen, g.state.Camera.Min)
+		}
 	}
 
-	// Draw selection rectangle if dragging
+	// Draw selection rectangle if dragging (with camera adjustment)
 	if g.inputHandler.IsDragging() {
-		// Draw a rectangle from DragStart to DragEnd
-		dragStart := g.inputHandler.DragStart()
-		dragEnd := g.inputHandler.DragEnd()
-		minX := math.Min(dragStart[0], dragEnd[0])
-		maxX := math.Max(dragStart[0], dragEnd[0])
-		minY := math.Min(dragStart[1], dragEnd[1])
-		maxY := math.Max(dragStart[1], dragEnd[1])
+		selection := g.inputHandler.selection.Sub(g.state.Camera.Min)
 
 		// Create a simple rectangle visualization using vector.StrokeLine
-		vector.StrokeRect(screen, float32(minX), float32(minY),
-			float32(maxX-minX), float32(maxY-minY), 1, SelectionColor, false)
+		vector.StrokeRect(screen, float32(selection.Min[0]), float32(selection.Min[1]),
+			float32(selection.Size()[0]), float32(selection.Size()[1]),
+			1, SelectionColor, false)
 	}
 }
 
-// GenerateRandomPosition creates a random position within screen bounds
-func GenerateRandomPosition(screenWidth, screenHeight, imgWidth, imgHeight int) geom.Vec2 {
-	x := rand.Intn(screenWidth-imgWidth) + imgWidth/2
-	y := rand.Intn(screenHeight-imgHeight) + imgHeight/2
+// isShipInView checks if a ship is within the camera view
+func (g *Scene) isShipInView(ship *Ship, cameraRect geom.Rectangle) bool {
+	if ship.Image == nil {
+		return false
+	}
 
-	return geom.Vec2{float64(x), float64(y)}
+	// Get ship size
+	bounds := ship.Image.Bounds()
+	width := float64(bounds.Dx())
+	height := float64(bounds.Dy())
+
+	// Calculate the radius of the ship for circular collision detection
+	radius := math.Max(width, height) / 2
+
+	// Check if ship's circular boundary intersects with camera rectangle
+	return cameraRect.IntersectsCircle(ship.Pos, float64(radius))
+}
+
+// generateRandomPosition creates a random position within world bounds
+func generateRandomPosition(worldSize geom.Vec2, shipSize geom.Vec2) geom.Vec2 {
+	return worldSize.Sub(shipSize).
+		Mul(rand.Float64()).Add(shipSize.Mul(0.5))
 }
 
 // GenerateRandomVelocity creates a random velocity vector with magnitude between 0 and 50 pixels per second

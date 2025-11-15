@@ -69,8 +69,8 @@ func (s *Ship) Update(elapsedTime time.Duration) error {
 	return nil
 }
 
-// Draw renders the ship
-func (s *Ship) Draw(screen *ebiten.Image) {
+// Draw renders the ship with an optional camera offset
+func (s *Ship) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	if s.Image == nil {
 		return
 	}
@@ -94,8 +94,14 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	opts.GeoM.Rotate(float64(angle))
 	opts.GeoM.Translate(centerX, centerY)
 
+	// Apply camera offset if provided
+	drawPos := s.Pos
+	if len(cameraOffset) > 0 {
+		drawPos = s.Pos.Sub(cameraOffset[0])
+	}
+
 	// Set the position (center the image on the ship's position)
-	opts.GeoM.Translate(math.Round(s.Pos[0]), math.Round(s.Pos[1]))
+	opts.GeoM.Translate(drawPos.Round().Unpack())
 
 	// Draw the image
 	screen.DrawImage(s.Image, opts)
@@ -104,8 +110,8 @@ func (s *Ship) Draw(screen *ebiten.Image) {
 	if s.IsSelected {
 		// Draw a circle around the ship
 		radius := float32(math.Max(float64(width), float64(height))) / 2
-		vector.StrokeCircle(screen, float32(math.Round((s.Pos[0] + centerX))),
-			float32(math.Round(s.Pos[1]+centerY)),
+		vector.StrokeCircle(screen, float32(math.Round((drawPos[0] + centerX))),
+			float32(math.Round(drawPos[1]+centerY)),
 			radius, 1, selectionColor, false)
 	}
 }

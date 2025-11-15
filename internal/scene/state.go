@@ -1,7 +1,12 @@
 package scene
 
+import "github.com/ambersignal/blacksunrising/pkg/geom"
+
 // State holds all the game state information
 type State struct {
+	Camera    geom.Rectangle // Camera viewpoint
+	WorldSize geom.Vec2
+
 	Ships             []*Ship            // All ships in the game
 	Groups            []*Group           // All groups of ships
 	Selected          map[*Ship]struct{} // Set of currently selected ships

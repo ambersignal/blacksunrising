@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ambersignal/blacksunrising/internal/scene"
+	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/ambersignal/blacksunrising/pkg/loader"
 	"github.com/ebitenui/ebitenui"
 	"github.com/ebitenui/ebitenui/widget"
@@ -57,7 +58,7 @@ func (g *Game) Update() error {
 	case GameStateMainMenu:
 		g.ui.Update()
 	case GameStateLaunched:
-		g.scene.Update()
+		return g.scene.Update()
 	case GameStateTerminated:
 		return ebiten.Termination
 	}
@@ -84,7 +85,7 @@ func (g *Game) Layout(w, h int) (int, int) {
 }
 
 func run() error {
-	scene, err := scene.NewScene(640, 360)
+	scene, err := scene.NewScene(geom.Vec2{2000, 2000}, geom.Vec2{640, 360})
 	if err != nil {
 		return fmt.Errorf("scene initialization: %w", err)
 	}
