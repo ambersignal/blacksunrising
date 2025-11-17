@@ -13,6 +13,8 @@ Black Sun Rising is a RTS game that's writen in Go language and the Ebiten engin
 - Avoid using log package, use slog instead.
 - Don't use os.Exit outside the main function.
 - Avoid magic numbers and declare constants inside const or var blocks.
+- Check if function deprecated after use.
+- Prefer function from the pkg/geom package for vector operations. Feel free to modify pkg/geom package by yourself.
 
 ## Architecture
 

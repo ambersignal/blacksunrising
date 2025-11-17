@@ -3,6 +3,7 @@ package geom
 import (
 	"image"
 	"math"
+	"math/rand/v2"
 )
 
 type Vec2 [2]float64
@@ -14,10 +15,32 @@ func FromPoint(pt image.Point) Vec2 {
 	}
 }
 
+// RandVec2 creates random vector in the (0,0)-(1,1) square.
+func RandVec2() Vec2 {
+	return Vec2{
+		rand.Float64(),
+		rand.Float64(),
+	}
+}
+
 func (v Vec2) Mul(k float64) Vec2 {
 	return Vec2{
 		v[0] * k,
 		v[1] * k,
+	}
+}
+
+func (v Vec2) HadamardProduct(u Vec2) Vec2 {
+	return Vec2{
+		v[0] * u[0],
+		v[1] * u[1],
+	}
+}
+
+func (v Vec2) HadamardDevide(u Vec2) Vec2 {
+	return Vec2{
+		v[0] / u[0],
+		v[1] / u[1],
 	}
 }
 

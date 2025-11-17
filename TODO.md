@@ -1,6 +1,6 @@
 - [ ] Avoidance for the bound of the map
 - [x] Camera
-- [ ] Minimap
+- [x] Minimap
 - [ ] Control menu
 - [ ] Music
 - [ ] Different type of the ships

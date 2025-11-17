@@ -9,6 +9,13 @@ type Rectangle struct {
 	Min, Max Vec2
 }
 
+func RectangleBySize(pos Vec2, size Vec2) Rectangle {
+	return Rectangle{
+		Min: pos,
+		Max: size.Add(pos),
+	}
+}
+
 func (r Rectangle) Empty() bool {
 	return r.Min[0] >= r.Max[0] || r.Min[1] >= r.Max[1]
 }
@@ -41,6 +48,22 @@ func (r Rectangle) Size() Vec2 {
 	return r.Max.Sub(r.Min)
 }
 
+// HadamardProduct returns element-wise product of two rectangles
+func (r Rectangle) HadamardProduct(v Vec2) Rectangle {
+	return Rectangle{
+		Min: r.Min.HadamardProduct(v),
+		Max: r.Max.HadamardProduct(v),
+	}
+}
+
+// HadamardDivide returns element-wise division of two rectangles
+func (r Rectangle) HadamardDivide(v Vec2) Rectangle {
+	return Rectangle{
+		Min: r.Min.HadamardDevide(v),
+		Max: r.Max.HadamardDevide(v),
+	}
+}
+
 func (r Rectangle) Round() Rectangle {
 	return Rectangle{
 		Min: r.Min.Round(),
@@ -66,6 +89,13 @@ func (r Rectangle) Normalize() Rectangle {
 	return Rectangle{
 		Min: MinVec2(r.Min, r.Max),
 		Max: MaxVec2(r.Min, r.Max),
+	}
+}
+
+func (r Rectangle) Mul(k float64) Rectangle {
+	return Rectangle{
+		Min: r.Min.Mul(k),
+		Max: r.Max.Mul(k),
 	}
 }
 

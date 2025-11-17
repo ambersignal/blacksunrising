@@ -1,6 +1,7 @@
 package scene
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
@@ -19,6 +20,7 @@ var (
 type Scene struct {
 	state        *State
 	inputHandler *InputHandler
+	minimap      *MiniMap
 
 	startTime time.Time
 }
@@ -34,16 +36,24 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	scene := &Scene{
 		startTime: time.Now(),
 		state:     state,
+		minimap:   NewMiniMap(),
 	}
 
 	// Initialize input handler
-	scene.inputHandler = NewInputHandler(state)
+	scene.inputHandler = NewInputHandler(state, scene.minimap)
 
 	// Load the ship image
 	shipImg, err := LoadShipImage()
 	if err != nil {
 		return nil, err
 	}
+
+	// Load the minimap image
+	minimapImg, err := LoadMiniMapImage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load minimap image: %w", err)
+	}
+	scene.minimap.Image = minimapImg
 
 	// Create multiple ships in random positions with random velocities
 	numShips := rand.Intn(11) + 10 // Create 10-20 ships
@@ -134,6 +144,9 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 			float32(selection.Size()[0]), float32(selection.Size()[1]),
 			1, SelectionColor, false)
 	}
+
+	// Draw minimap in the top-right corner
+	g.minimap.Draw(screen, g.state)
 }
 
 // isShipInView checks if a ship is within the camera view
@@ -157,7 +170,8 @@ func (g *Scene) isShipInView(ship *Ship, cameraRect geom.Rectangle) bool {
 // generateRandomPosition creates a random position within world bounds
 func generateRandomPosition(worldSize geom.Vec2, shipSize geom.Vec2) geom.Vec2 {
 	return worldSize.Sub(shipSize).
-		Mul(rand.Float64()).Add(shipSize.Mul(0.5))
+		HadamardProduct(geom.RandVec2()).
+		Add(shipSize.Mul(0.5))
 }
 
 // GenerateRandomVelocity creates a random velocity vector with magnitude between 0 and 50 pixels per second

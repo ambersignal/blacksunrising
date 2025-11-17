@@ -11,41 +11,55 @@ import (
 // InputHandler handles all input-related logic for the game
 type InputHandler struct {
 	state      *State
+	minimap    *MiniMap
 	isDragging bool
 	selection  geom.Rectangle
 }
 
 // NewInputHandler creates a new input handler
-func NewInputHandler(state *State) *InputHandler {
+func NewInputHandler(state *State, minimap *MiniMap) *InputHandler {
 	return &InputHandler{
-		state: state,
+		state:   state,
+		minimap: minimap,
 	}
 }
 
 // Update processes input for the current frame
 func (ih *InputHandler) Update() error {
+	cursorPos := ih.CursorPosition()
 	// Check for ESC key to exit
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
 	}
+
+	// Check if click is on minimap
+	if ih.isCursorOnMinimap(cursorPos) {
+		// Handle minimap click - center camera on clicked position
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			ih.handleMinimapClick(cursorPos)
+		}
+		return nil
+	}
+
 	ih.updateCamera()
 
-	// Handle right mouse button for selection
+	// Handle left mouse button for selection or minimap click
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		cursorPos := ih.CursorPosition().Add(ih.state.Camera.Min)
+		// Handle regular selection
+		worldCursorPos := cursorPos.Add(ih.state.Camera.Min)
 
 		if !ih.isDragging {
 			// Start dragging
 			ih.isDragging = true
-			ih.selection.Min = cursorPos
-			ih.selection.Max = cursorPos
+			ih.selection.Min = worldCursorPos
+			ih.selection.Max = worldCursorPos
 		} else {
 			// Continue dragging
-			ih.selection.Max = cursorPos
+			ih.selection.Max = worldCursorPos
 			ih.selection = ih.selection.Normalize()
 		}
 	} else {
-		// Right mouse button released
+		// Left mouse button released
 		if ih.isDragging {
 			// Process the selection
 			ih.processSelection()
@@ -53,7 +67,7 @@ func (ih *InputHandler) Update() error {
 		}
 	}
 
-	// Check for left mouse click to set target position for the current group
+	// Check for right mouse click to set target position for the current group
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) && ih.state.CurrentGroupIndex >= 0 {
 		cursorPos := ih.CursorPosition()
 
@@ -104,6 +118,54 @@ func (ih *InputHandler) updateCamera() {
 
 func (ih *InputHandler) CursorPosition() geom.Vec2 {
 	return geom.FromPoint(image.Pt(ebiten.CursorPosition()))
+}
+
+// isCursorOnMinimap checks if a click position is within the minimap area
+func (ih *InputHandler) isCursorOnMinimap(clickPos geom.Vec2) bool {
+	minimapPos := geom.Vec2{
+		ih.state.Camera.Size()[0] - ih.minimap.Size - 10,
+		10.0,
+	}
+
+	minimapRect := geom.Rectangle{
+		Min: minimapPos,
+		Max: minimapPos.Add(geom.Vec2{ih.minimap.Size, ih.minimap.Size}),
+	}
+
+	isClick := clickPos[0] >= minimapRect.Min[0] && clickPos[0] <= minimapRect.Max[0] &&
+		clickPos[1] >= minimapRect.Min[1] && clickPos[1] <= minimapRect.Max[1]
+	//slog.Info("handle minimap click", "isClick", isClick, "size", screenSize)
+
+	return isClick
+}
+
+// handleMinimapClick centers the camera on the clicked position in the minimap
+func (ih *InputHandler) handleMinimapClick(clickPos geom.Vec2) {
+	clickedWorldPos := ih.minimap.ScreenToWorld(clickPos,
+		ih.state.Camera.Size(), ih.state.WorldSize)
+
+	// Center camera on the clicked position
+	cameraSize := ih.state.Camera.Size()
+	ih.state.Camera.Min = clickedWorldPos.Sub(cameraSize.Mul(0.5))
+	ih.state.Camera.Max = ih.state.Camera.Min.Add(cameraSize)
+
+	// Ensure camera stays within world bounds
+	if ih.state.Camera.Min[0] < 0 {
+		ih.state.Camera.Min[0] = 0
+		ih.state.Camera.Max[0] = cameraSize[0]
+	}
+	if ih.state.Camera.Min[1] < 0 {
+		ih.state.Camera.Min[1] = 0
+		ih.state.Camera.Max[1] = cameraSize[1]
+	}
+	if ih.state.Camera.Max[0] > ih.state.WorldSize[0] {
+		ih.state.Camera.Max[0] = ih.state.WorldSize[0]
+		ih.state.Camera.Min[0] = ih.state.WorldSize[0] - cameraSize[0]
+	}
+	if ih.state.Camera.Max[1] > ih.state.WorldSize[1] {
+		ih.state.Camera.Max[1] = ih.state.WorldSize[1]
+		ih.state.Camera.Min[1] = ih.state.WorldSize[1] - cameraSize[1]
+	}
 }
 
 // processSelection handles the creation of new groups based on selection
