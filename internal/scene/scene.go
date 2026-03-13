@@ -7,9 +7,10 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/ambersignal/blacksunrising/internal/scene/state"
+	"github.com/ambersignal/blacksunrising/pkg/draw"
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 var (
@@ -18,7 +19,7 @@ var (
 
 // Scene represents the main game scene
 type Scene struct {
-	state        *State
+	state        *state.State
 	inputHandler *InputHandler
 	minimap      *MiniMap
 
@@ -27,20 +28,31 @@ type Scene struct {
 
 // NewScene creates a new game scene
 func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
-	state := NewState()
-	state.Camera = geom.Rectangle{
+	st := state.NewState()
+	st.Camera = geom.Rectangle{
 		Max: cameraSize,
 	}
-	state.WorldSize = worldSize
+	st.WorldSize = worldSize
+
+	// FIXME(evgenii.omelchenko): hardcoded miniMapSizes
+	miniMapPos := geom.Vec2{
+		cameraSize[0] - 60,
+		10,
+	}
+
+	st.MiniMap = geom.Rectangle{
+		Min: miniMapPos,
+		Max: miniMapPos.Add(geom.Vec2{50, 50}),
+	}
 
 	scene := &Scene{
 		startTime: time.Now(),
-		state:     state,
-		minimap:   NewMiniMap(),
+		state:     st,
+		minimap:   NewMiniMap(st),
 	}
 
 	// Initialize input handler
-	scene.inputHandler = NewInputHandler(state, scene.minimap)
+	scene.inputHandler = NewInputHandler(st)
 
 	// Load the ship image
 	shipImg, err := LoadShipImage()
@@ -66,7 +78,7 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		velocity := GenerateRandomVelocity()
 
 		// Create ship with random position and velocity
-		ship := NewShip(pos, velocity, shipImg)
+		ship := state.NewShip(pos, velocity, shipImg)
 		scene.state.AddShip(ship)
 	}
 
@@ -90,7 +102,7 @@ func (g *Scene) Update() error {
 	}
 
 	// Clean up empty groups periodically
-	g.cleanupEmptyGroups()
+	g.state.CleanupEmptyGroups()
 
 	// Apply steering behaviors
 	for _, ship := range g.state.Ships {
@@ -101,7 +113,7 @@ func (g *Scene) Update() error {
 
 		// If we have a target and ship is in a group, add a seek force
 		var seekForce geom.Vec2
-		group := g.getGroupForShip(ship)
+		group := g.state.GetGroupForShip(ship)
 		if group != nil && group.HasTarget {
 			seekForce = g.Seek(ship, group.Target)
 		}
@@ -139,18 +151,16 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	if g.inputHandler.IsDragging() {
 		selection := g.inputHandler.selection.Sub(g.state.Camera.Min)
 
-		// Create a simple rectangle visualization using vector.StrokeLine
-		vector.StrokeRect(screen, float32(selection.Min[0]), float32(selection.Min[1]),
-			float32(selection.Size()[0]), float32(selection.Size()[1]),
-			1, SelectionColor, false)
+		// Create a simple rectangle visualization using draw.StrokeLine
+		draw.StrokeRect(screen, selection, 1, SelectionColor)
 	}
 
 	// Draw minimap in the top-right corner
-	g.minimap.Draw(screen, g.state)
+	g.minimap.Draw(screen)
 }
 
 // isShipInView checks if a ship is within the camera view
-func (g *Scene) isShipInView(ship *Ship, cameraRect geom.Rectangle) bool {
+func (g *Scene) isShipInView(ship *state.Ship, cameraRect geom.Rectangle) bool {
 	if ship.Image == nil {
 		return false
 	}
@@ -185,55 +195,4 @@ func GenerateRandomVelocity() geom.Vec2 {
 		velMagnitude * math.Cos(velAngle),
 		velMagnitude * math.Sin(velAngle),
 	}
-}
-
-// getGroupForShip returns the group that contains the ship, or nil if not in any group
-func (g *Scene) getGroupForShip(ship *Ship) *Group {
-	for _, group := range g.state.Groups {
-		if group.Contains(ship) {
-			return group
-		}
-	}
-	return nil
-}
-
-// cleanupEmptyGroups removes groups that have no ships
-func (g *Scene) cleanupEmptyGroups() {
-	// Iterate backwards to safely remove elements
-	for i := len(g.state.Groups) - 1; i >= 0; i-- {
-		if g.state.Groups[i].IsEmpty() {
-			// Remove the group
-			g.state.Groups = append(g.state.Groups[:i], g.state.Groups[i+1:]...)
-
-			// Adjust current group index if needed
-			if g.state.CurrentGroupIndex >= i && g.state.CurrentGroupIndex > 0 {
-				g.state.CurrentGroupIndex--
-			} else if g.state.CurrentGroupIndex >= len(g.state.Groups) {
-				g.state.CurrentGroupIndex = len(g.state.Groups) - 1
-			}
-		}
-	}
-
-	// If no groups left, reset current group index
-	if len(g.state.Groups) == 0 {
-		g.state.CurrentGroupIndex = -1
-	}
-}
-
-func SmoothStep(edge0, edge1, x float64) float64 {
-	t := Clamp((x-edge0)/(edge1-edge0), 0.0, 1.0)
-
-	return t * t * (3 - 2*t)
-}
-
-func Clamp(x, low, high float64) float64 {
-	if x < low {
-		return low
-	}
-
-	if x > high {
-		return high
-	}
-
-	return x
 }

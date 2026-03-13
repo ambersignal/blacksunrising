@@ -12,11 +12,13 @@ type Rectangle struct {
 }
 
 // RectangleBySize creates a rectangle from a position and size.
-// The position defines the minimum corner, and the size is added to the position to determine the maximum corner.
+// The position defines the a center of the rectangle.
 func RectangleBySize(pos Vec2, size Vec2) Rectangle {
+	semiSize := size.Div(2)
+
 	return Rectangle{
-		Min: pos,
-		Max: size.Add(pos),
+		Min: pos.Sub(semiSize),
+		Max: pos.Add(semiSize),
 	}
 }
 

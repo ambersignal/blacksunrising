@@ -22,12 +22,6 @@ const (
 	GameStateTerminated
 )
 
-const (
-	width  = 640
-	height = 360
-	mul    = 2
-)
-
 var (
 	BackgroundColor = color.RGBA{15, 13, 14, 255}
 )
@@ -80,11 +74,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // Layout returns the game's screen size
 func (g *Game) Layout(w, h int) (int, int) {
-	// TODO: Define proper screen dimensions
-	return width, width * h / w
+	// FIXME(elemir): hardcoded layout
+	return 640, 360
 }
 
 func run() error {
+	// FIXME(elemir): hardcoded layout
 	scene, err := scene.NewScene(geom.Vec2{2000, 2000}, geom.Vec2{640, 360})
 	if err != nil {
 		return fmt.Errorf("scene initialization: %w", err)

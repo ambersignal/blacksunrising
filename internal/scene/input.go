@@ -4,23 +4,23 @@ import (
 	"image"
 	"math"
 
-	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/ambersignal/blacksunrising/internal/scene/state"
+	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
 // InputHandler handles all input-related logic for the game
 type InputHandler struct {
-	state      *State
-	minimap    *MiniMap
+	state      *state.State
 	isDragging bool
 	selection  geom.Rectangle
 }
 
 // NewInputHandler creates a new input handler
-func NewInputHandler(state *State, minimap *MiniMap) *InputHandler {
+func NewInputHandler(state *state.State) *InputHandler {
 	return &InputHandler{
-		state:   state,
-		minimap: minimap,
+		state: state,
 	}
 }
 
@@ -104,16 +104,8 @@ func (ih *InputHandler) updateCamera() {
 			cameraShift[i] = moveSpeed
 		}
 	}
-	ih.state.Camera = ih.state.Camera.Add(cameraShift)
 
-	for i := range 2 {
-		if ih.state.Camera.Min[i] < 0 {
-			cameraShift[i] = -ih.state.Camera.Min[i]
-		} else if ih.state.Camera.Max[i] > ih.state.WorldSize[i] {
-			cameraShift[i] = ih.state.Camera.Max[i] - ih.state.WorldSize[i]
-		}
-	}
-	ih.state.Camera = ih.state.Camera.Add(cameraShift)
+	ih.state.MoveCameraOn(cameraShift)
 }
 
 func (ih *InputHandler) CursorPosition() geom.Vec2 {
@@ -122,50 +114,14 @@ func (ih *InputHandler) CursorPosition() geom.Vec2 {
 
 // isCursorOnMinimap checks if a click position is within the minimap area
 func (ih *InputHandler) isCursorOnMinimap(clickPos geom.Vec2) bool {
-	minimapPos := geom.Vec2{
-		ih.state.Camera.Size()[0] - ih.minimap.Size - 10,
-		10.0,
-	}
-
-	minimapRect := geom.Rectangle{
-		Min: minimapPos,
-		Max: minimapPos.Add(geom.Vec2{ih.minimap.Size, ih.minimap.Size}),
-	}
-
-	isClick := clickPos[0] >= minimapRect.Min[0] && clickPos[0] <= minimapRect.Max[0] &&
-		clickPos[1] >= minimapRect.Min[1] && clickPos[1] <= minimapRect.Max[1]
-	//slog.Info("handle minimap click", "isClick", isClick, "size", screenSize)
-
-	return isClick
+	return clickPos.IsInsideRect(ih.state.MiniMap)
 }
 
 // handleMinimapClick centers the camera on the clicked position in the minimap
 func (ih *InputHandler) handleMinimapClick(clickPos geom.Vec2) {
-	clickedWorldPos := ih.minimap.ScreenToWorld(clickPos,
-		ih.state.Camera.Size(), ih.state.WorldSize)
+	clickedWorldPos := ih.state.MinimapScreenToWorld(clickPos)
 
-	// Center camera on the clicked position
-	cameraSize := ih.state.Camera.Size()
-	ih.state.Camera.Min = clickedWorldPos.Sub(cameraSize.Mul(0.5))
-	ih.state.Camera.Max = ih.state.Camera.Min.Add(cameraSize)
-
-	// Ensure camera stays within world bounds
-	if ih.state.Camera.Min[0] < 0 {
-		ih.state.Camera.Min[0] = 0
-		ih.state.Camera.Max[0] = cameraSize[0]
-	}
-	if ih.state.Camera.Min[1] < 0 {
-		ih.state.Camera.Min[1] = 0
-		ih.state.Camera.Max[1] = cameraSize[1]
-	}
-	if ih.state.Camera.Max[0] > ih.state.WorldSize[0] {
-		ih.state.Camera.Max[0] = ih.state.WorldSize[0]
-		ih.state.Camera.Min[0] = ih.state.WorldSize[0] - cameraSize[0]
-	}
-	if ih.state.Camera.Max[1] > ih.state.WorldSize[1] {
-		ih.state.Camera.Max[1] = ih.state.WorldSize[1]
-		ih.state.Camera.Min[1] = ih.state.WorldSize[1] - cameraSize[1]
-	}
+	ih.state.MoveCameraTo(clickedWorldPos)
 }
 
 // processSelection handles the creation of new groups based on selection
@@ -188,10 +144,10 @@ func (ih *InputHandler) processSelection() {
 	}
 
 	// Remove selected ships from any existing groups first
-	ih.removeFromAllGroups()
+	ih.state.RemoveSelectedFromAllGroups()
 
 	// Create a new group with selected ships
-	newGroup := NewGroup()
+	newGroup := state.NewGroup()
 	for ship := range ih.state.Selected {
 		newGroup.AddShip(ship)
 	}
@@ -206,14 +162,4 @@ func (ih *InputHandler) processSelection() {
 // IsDragging returns whether we're currently dragging for selection
 func (ih *InputHandler) IsDragging() bool {
 	return ih.isDragging
-}
-
-// removeFromAllGroups removes selected ships from all existing groups
-func (ih *InputHandler) removeFromAllGroups() {
-	// For each selected ship, remove it from any group it might be in
-	for ship := range ih.state.Selected {
-		for _, group := range ih.state.Groups {
-			group.RemoveShip(ship)
-		}
-	}
 }

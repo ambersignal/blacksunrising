@@ -1,6 +1,7 @@
 package scene
 
 import (
+	"github.com/ambersignal/blacksunrising/internal/scene/state"
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
@@ -10,9 +11,9 @@ var (
 )
 
 // Alignment calculates alignment force for a ship based on nearby ships in the same group
-func (g *Scene) Alignment(ship *Ship) geom.Vec2 {
+func (g *Scene) Alignment(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	group := g.getGroupForShip(ship)
+	group := g.state.GetGroupForShip(ship)
 
 	// Only apply alignment if ship is in a group
 	if group == nil {
@@ -57,9 +58,9 @@ func (g *Scene) Alignment(ship *Ship) geom.Vec2 {
 }
 
 // Separation calculates separation force for a ship based on nearby ships in the same group
-func (g *Scene) Separation(ship *Ship) geom.Vec2 {
+func (g *Scene) Separation(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	group := g.getGroupForShip(ship)
+	group := g.state.GetGroupForShip(ship)
 
 	// Only apply separation if ship is in a group
 	if group == nil {
@@ -88,7 +89,7 @@ func (g *Scene) Separation(ship *Ship) geom.Vec2 {
 		if distance < MaxSeparation && distance > MinSeparation {
 			pushForce := ship.Pos.Sub(other.Pos)
 			separationStrength := pushForce.Length() *
-				(1 - SmoothStep(MinSeparation, MaxSeparation, distance))
+				(1 - geom.SmoothStep(MinSeparation, MaxSeparation, distance))
 			pushForce = pushForce.Normalize().Mul(pushForce.Length() * separationStrength)
 
 			sum = sum.Add(pushForce)
@@ -111,9 +112,9 @@ func (g *Scene) Separation(ship *Ship) geom.Vec2 {
 }
 
 // Cohesion calculates cohesion force for a ship based on nearby ships in the same group
-func (g *Scene) Cohesion(ship *Ship) geom.Vec2 {
+func (g *Scene) Cohesion(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
-	group := g.getGroupForShip(ship)
+	group := g.state.GetGroupForShip(ship)
 
 	// Only apply cohesion if ship is in a group
 	if group == nil {
@@ -162,7 +163,7 @@ func (g *Scene) Cohesion(ship *Ship) geom.Vec2 {
 }
 
 // Seek calculates a steering force to move a ship toward a target position
-func (g *Scene) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
+func (g *Scene) Seek(ship *state.Ship, target geom.Vec2) geom.Vec2 {
 	// Calculate desired velocity toward target
 	desired := target.Sub(ship.Pos)
 
@@ -174,7 +175,7 @@ func (g *Scene) Seek(ship *Ship, target geom.Vec2) geom.Vec2 {
 
 	// Normalize and scale to desired velocity
 	if desired.Length() > 0 {
-		desired = desired.Normalize().Mul(MaxSpeed) // Desired velocity
+		desired = desired.Normalize().Mul(ship.MaxSpeed) // Desired velocity
 	}
 
 	// Reynolds steering: subtract current velocity to get steering force

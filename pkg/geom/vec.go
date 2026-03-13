@@ -37,6 +37,15 @@ func (v Vec2) Mul(k float64) Vec2 {
 	}
 }
 
+// Div returns a new vector scaled down on the scalar k.
+// Each component of the vector is divided on k.
+func (v Vec2) Div(k float64) Vec2 {
+	return Vec2{
+		v[0] / k,
+		v[1] / k,
+	}
+}
+
 // HadamardProduct returns the element-wise product of two vectors.
 // The result vector has components (v[0]*u[0], v[1]*u[1]).
 func (v Vec2) HadamardProduct(u Vec2) Vec2 {
@@ -128,6 +137,13 @@ func (v Vec2) Angle() Angle {
 // Unpack returns the X and Y components of the vector as separate float64 values.
 func (v Vec2) Unpack() (float64, float64) {
 	return v[0], v[1]
+}
+
+func (v Vec2) IsInsideRect(rect Rectangle) bool {
+	return v[0] >= rect.Min[0] &&
+		v[0] <= rect.Max[0] &&
+		v[1] >= rect.Min[1] &&
+		v[1] <= rect.Max[1]
 }
 
 // MinVec2 returns a vector with the minimum components from two vectors.

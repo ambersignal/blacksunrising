@@ -1,18 +1,18 @@
-package scene
+package state
 
 import (
 	"image/color"
 	"math"
 	"time"
 
-	"github.com/ambersignal/blacksunrising/pkg/geom"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
 var (
-	selectionColor = color.RGBA{30, 188, 115, 255}
+	selectionColor = color.RGBA{30, 188, 115, 200}
 )
 
 // Global constants for ship movement limits
@@ -27,24 +27,21 @@ type Ship struct {
 	Image      *ebiten.Image
 	Vel        geom.Vec2 // Velocity in pixels per second
 	Accel      geom.Vec2 // Acceleration in pixels per second squared
-	IsSelected bool      // Whether this ship is currently selected
+	MaxSpeed   float64
+	IsSelected bool // Whether this ship is currently selected
 }
 
 // NewShip creates a new ship with the specified position, velocity, and image
 func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 	return &Ship{
-		Pos:        pos,
-		Image:      img,
-		Vel:        vel,
-		Accel:      geom.Vec2{0, 0},
+		Pos:      pos,
+		Image:    img,
+		Vel:      vel,
+		Accel:    geom.Vec2{0, 0},
+		MaxSpeed: MaxSpeed,
+
 		IsSelected: false,
 	}
-}
-
-// LoadShipImage loads the ship image from file
-func LoadShipImage() (*ebiten.Image, error) {
-	img, _, err := ebitenutil.NewImageFromFile("data/fighter.png")
-	return img, err
 }
 
 // Update updates the ship's state
@@ -61,7 +58,7 @@ func (s *Ship) Update(elapsedTime time.Duration) error {
 	}
 
 	// Update position based on velocity
-	s.Pos = s.Pos.Add(s.Vel.Mul(deltaSeconds))
+	s.Pos = s.Pos.Add(s.Vel.Mul(deltaSeconds)).Round()
 
 	// Reset acceleration for next frame
 	s.Accel = geom.Vec2{0, 0}
@@ -90,6 +87,7 @@ func (s *Ship) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	// Apply rotation around the center of the image
 	centerX := float64(width) / 2
 	centerY := float64(height) / 2
+
 	opts.GeoM.Translate(-centerX, -centerY)
 	opts.GeoM.Rotate(float64(angle))
 	opts.GeoM.Translate(centerX, centerY)
@@ -109,9 +107,19 @@ func (s *Ship) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	// Draw selection indicator if selected
 	if s.IsSelected {
 		// Draw a circle around the ship
-		radius := float32(math.Max(float64(width), float64(height))) / 2
 		vector.StrokeCircle(screen, float32(math.Round((drawPos[0] + centerX))),
 			float32(math.Round(drawPos[1]+centerY)),
-			radius, 1, selectionColor, false)
+			float32(s.Radius()), 1, selectionColor, false)
 	}
+}
+
+// Radius of the ship.
+func (s *Ship) Radius() float64 {
+	// Get ship size
+	bounds := s.Image.Bounds()
+	width := float64(bounds.Dx())
+	height := float64(bounds.Dy())
+
+	// Calculate the radius of the ship for circular collision detection
+	return math.Max(width, height) / 2
 }
