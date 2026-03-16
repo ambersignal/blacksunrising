@@ -22,8 +22,10 @@ type Scene struct {
 	state        *state.State
 	inputHandler *InputHandler
 	minimap      *MiniMap
+	nebula       *NebulaBackground
 
-	startTime time.Time
+	startTime   time.Time
+	updatedTime time.Time
 }
 
 // NewScene creates a new game scene
@@ -46,9 +48,11 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	}
 
 	scene := &Scene{
-		startTime: time.Now(),
-		state:     st,
-		minimap:   NewMiniMap(st),
+		startTime:   time.Now(),
+		updatedTime: time.Now(),
+
+		state:   st,
+		minimap: NewMiniMap(st),
 	}
 
 	// Initialize input handler
@@ -66,6 +70,13 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		return nil, fmt.Errorf("failed to load minimap image: %w", err)
 	}
 	scene.minimap.Image = minimapImg
+
+	// Load the nebula background
+	nebulaBg, err := NewNebulaBackground()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load nebula background: %w", err)
+	}
+	scene.nebula = nebulaBg
 
 	// Create multiple ships in random positions with random velocities
 	numShips := rand.Intn(11) + 10 // Create 10-20 ships
@@ -88,8 +99,8 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 // Update updates the game logic
 func (g *Scene) Update() error {
 	// Calculate elapsed time since last frame
-	elapsedTime := time.Since(g.startTime)
-	g.startTime = time.Now() // Update for next frame
+	elapsedTime := time.Since(g.updatedTime)
+	g.updatedTime = time.Now() // Update for next frame
 
 	// Handle input
 	if err := g.inputHandler.Update(); err != nil {
@@ -138,6 +149,12 @@ func (g *Scene) Update() error {
 
 // Draw renders the game screen
 func (g *Scene) Draw(screen *ebiten.Image) {
+	// Draw nebula background first
+	if g.nebula != nil {
+		elapsed := time.Since(g.startTime)
+		g.nebula.Draw(screen, float64(elapsed.Seconds()))
+	}
+
 	// Draw all ships that are within the camera view
 	for _, ship := range g.state.Ships {
 		// Check if ship is within camera view

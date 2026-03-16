@@ -17,7 +17,7 @@ var (
 
 // Global constants for ship movement limits
 const (
-	MaxSpeed         = 128.0       // Maximum speed in pixels per second
+	MaxSpeed         = 256.0       // Maximum speed in pixels per second
 	MaxRotationSpeed = math.Pi / 4 // Maximum rotation speed in radians per second
 )
 
@@ -109,7 +109,7 @@ func (s *Ship) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 		// Draw a circle around the ship
 		vector.StrokeCircle(screen, float32(math.Round((drawPos[0] + centerX))),
 			float32(math.Round(drawPos[1]+centerY)),
-			float32(s.Radius()), 1, selectionColor, false)
+			float32(s.Radius()), 1, selectionColor, true)
 	}
 }
 

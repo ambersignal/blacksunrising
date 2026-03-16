@@ -26,6 +26,12 @@ var (
 	BackgroundColor = color.RGBA{15, 13, 14, 255}
 )
 
+// FIXME(elemir): hardcoded layout
+const (
+	Height = 540
+	Width  = 960
+)
+
 // Scene represents a game scene
 type Scene interface {
 	Update() error
@@ -74,13 +80,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // Layout returns the game's screen size
 func (g *Game) Layout(w, h int) (int, int) {
-	// FIXME(elemir): hardcoded layout
-	return 640, 360
+	return Width, Height
 }
 
 func run() error {
 	// FIXME(elemir): hardcoded layout
-	scene, err := scene.NewScene(geom.Vec2{2000, 2000}, geom.Vec2{640, 360})
+	scene, err := scene.NewScene(geom.Vec2{2000, 2000}, geom.Vec2{Width, Height})
 	if err != nil {
 		return fmt.Errorf("scene initialization: %w", err)
 	}
