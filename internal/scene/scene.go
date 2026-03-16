@@ -152,7 +152,7 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	// Draw nebula background first
 	if g.nebula != nil {
 		elapsed := time.Since(g.startTime)
-		g.nebula.Draw(screen, float64(elapsed.Seconds()))
+		g.nebula.Draw(screen, g.state.Camera.Min, float64(elapsed.Seconds()))
 	}
 
 	// Draw all ships that are within the camera view
