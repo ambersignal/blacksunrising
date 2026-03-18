@@ -23,6 +23,7 @@ type Scene struct {
 	inputHandler *InputHandler
 	minimap      *MiniMap
 	nebula       *NebulaBackground
+	planet       *Planet
 
 	startTime   time.Time
 	updatedTime time.Time
@@ -77,6 +78,17 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		return nil, fmt.Errorf("failed to load nebula background: %w", err)
 	}
 	scene.nebula = nebulaBg
+
+	// Create planet in the bottom-right corner of the map
+	//	planetPos := geom.Vec2{worldSize[0] - 600, worldSize[1] - 600}
+	planetPos := geom.Vec2{100, 100}
+	st.Planet = state.NewPlanet(planetPos)
+
+	planetRenderer, err := NewPlanet()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load planet: %w", err)
+	}
+	scene.planet = planetRenderer
 
 	// Create multiple ships in random positions with random velocities
 	numShips := rand.Intn(11) + 10 // Create 10-20 ships
@@ -153,6 +165,12 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	if g.nebula != nil {
 		elapsed := time.Since(g.startTime)
 		g.nebula.Draw(screen, g.state.Camera.Min, float64(elapsed.Seconds()))
+	}
+
+	// Draw planet
+	if g.planet != nil && g.state.Planet != nil {
+		elapsed := time.Since(g.startTime)
+		g.planet.Draw(screen, g.state.Planet, g.state.Camera.Min, float64(elapsed.Seconds()))
 	}
 
 	// Draw all ships that are within the camera view

@@ -13,6 +13,7 @@ type State struct {
 	Groups            []*Group           // All groups of ships
 	Selected          map[*Ship]struct{} // Set of currently selected ships
 	CurrentGroupIndex int                // Index of the currently active group
+	Planet            *Planet            // The planet in the game world
 }
 
 // NewState creates a new game state
@@ -22,6 +23,7 @@ func NewState() *State {
 		Groups:            make([]*Group, 0),
 		Selected:          make(map[*Ship]struct{}),
 		CurrentGroupIndex: -1, // No group selected initially
+		Planet:            nil,
 	}
 }
 
