@@ -10,6 +10,7 @@ type State struct {
 	WorldSize geom.Vec2
 
 	Ships             []*Ship            // All ships in the game
+	Asteroids         []*Asteroid        // All asteroids in the game
 	Groups            []*Group           // All groups of ships
 	Selected          map[*Ship]struct{} // Set of currently selected ships
 	CurrentGroupIndex int                // Index of the currently active group
@@ -20,6 +21,7 @@ type State struct {
 func NewState() *State {
 	return &State{
 		Ships:             make([]*Ship, 0),
+		Asteroids:         make([]*Asteroid, 0),
 		Groups:            make([]*Group, 0),
 		Selected:          make(map[*Ship]struct{}),
 		CurrentGroupIndex: -1, // No group selected initially
@@ -30,6 +32,11 @@ func NewState() *State {
 // AddShip adds a ship to the state
 func (s *State) AddShip(ship *Ship) {
 	s.Ships = append(s.Ships, ship)
+}
+
+// AddAsteroid adds an asteroid to the state
+func (s *State) AddAsteroid(asteroid *Asteroid) {
+	s.Asteroids = append(s.Asteroids, asteroid)
 }
 
 // AddGroup adds a group to the state

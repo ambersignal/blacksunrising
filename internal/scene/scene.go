@@ -71,6 +71,12 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		return nil, err
 	}
 
+	// Load the asteroid image
+	asteroidImg, err := LoadAsteroidImage()
+	if err != nil {
+		return nil, err
+	}
+
 	// Load the nebula background
 	nebulaBg, err := NewNebulaBackground()
 	if err != nil {
@@ -102,6 +108,14 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		// Create ship with random position and velocity
 		ship := state.NewShip(pos, velocity, shipImg)
 		scene.state.AddShip(ship)
+	}
+
+	// Create asteroids in random positions
+	asteroidSize := geom.Vec2{state.AsteroidSpriteSize, state.AsteroidSpriteSize}
+	for i := 0; i < 20; i++ {
+		pos := generateRandomPosition(worldSize, asteroidSize)
+		asteroid := state.NewAsteroid(pos, asteroidImg)
+		scene.state.AddAsteroid(asteroid)
 	}
 
 	return scene, nil
@@ -155,6 +169,11 @@ func (g *Scene) Update() error {
 		}
 	}
 
+	// Update all asteroids
+	for _, asteroid := range g.state.Asteroids {
+		asteroid.Update(elapsedTime)
+	}
+
 	return nil
 }
 
@@ -170,6 +189,13 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	if g.planet != nil && g.state.Planet != nil {
 		elapsed := time.Since(g.startTime)
 		g.planet.Draw(screen, g.state.Planet, g.state.Camera.Min, float64(elapsed.Seconds()))
+	}
+
+	// Draw all asteroids that are within the camera view
+	for _, asteroid := range g.state.Asteroids {
+		if g.isAsteroidInView(asteroid, g.state.Camera) {
+			asteroid.Draw(screen, g.state.Camera.Min)
+		}
 	}
 
 	// Draw all ships that are within the camera view
@@ -209,6 +235,19 @@ func (g *Scene) isShipInView(ship *state.Ship, cameraRect geom.Rectangle) bool {
 
 	// Check if ship's circular boundary intersects with camera rectangle
 	return cameraRect.IntersectsCircle(ship.Pos, float64(radius))
+}
+
+// isAsteroidInView checks if an asteroid is within the camera view
+func (g *Scene) isAsteroidInView(asteroid *state.Asteroid, cameraRect geom.Rectangle) bool {
+	if asteroid.Animation == nil || asteroid.Animation.Image == nil {
+		return false
+	}
+
+	// Calculate the radius of the asteroid for circular collision detection
+	radius := asteroid.Radius()
+
+	// Check if asteroid's circular boundary intersects with camera rectangle
+	return cameraRect.IntersectsCircle(asteroid.Pos, radius)
 }
 
 // generateRandomPosition creates a random position within world bounds

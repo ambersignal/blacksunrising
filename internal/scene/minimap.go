@@ -14,6 +14,7 @@ var (
 	MinimapViewportColor = color.RGBA{255, 255, 0, 255}   // Yellow for camera viewport
 	MinimapShipColor     = color.RGBA{255, 255, 255, 255} // White for unselected ships
 	MinimapSelectedColor = color.RGBA{30, 188, 115, 255}  // Green for selected ships
+	MinimapAsteroidColor = color.RGBA{220, 140, 90, 255}  // Brown for asteroids
 )
 
 // MiniMap represents the minimap component
@@ -73,6 +74,16 @@ func (m *MiniMap) Draw(screen *ebiten.Image, time float32) {
 
 		// Draw small dot for ship
 		draw.Pixel(screen, normalizedPos, shipColor)
+	}
+
+	// Draw all asteroids on minimap
+	for _, asteroid := range m.state.Asteroids {
+		// Convert world coordinates to normalized coordinates
+		normalizedPos := asteroid.Pos.HadamardDevide(m.state.WorldSize).
+			HadamardProduct(m.state.MiniMap.Size()).Add(m.state.MiniMap.Min)
+
+		// Draw small dot for asteroid using brown color
+		draw.Pixel(screen, normalizedPos, MinimapAsteroidColor)
 	}
 }
 

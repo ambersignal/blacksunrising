@@ -10,3 +10,9 @@ func LoadShipImage() (*ebiten.Image, error) {
 	img, _, err := ebitenutil.NewImageFromFile("data/fighter.png")
 	return img, err
 }
+
+// LoadAsteroidImage loads the asteroid spritesheet from file
+func LoadAsteroidImage() (*ebiten.Image, error) {
+	img, _, err := ebitenutil.NewImageFromFile("data/asteroids1.png")
+	return img, err
+}
