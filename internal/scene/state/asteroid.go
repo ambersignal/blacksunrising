@@ -56,3 +56,19 @@ func (a *Asteroid) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 func (a *Asteroid) Radius() float64 {
 	return float64(AsteroidSpriteSize) / 2
 }
+
+// AsteroidField represents a clustered field of asteroids
+type AsteroidField struct {
+	Center    geom.Vec2
+	Radius    float64
+	Asteroids []*Asteroid
+}
+
+// NewAsteroidField creates a new empty asteroid field at the specified position
+func NewAsteroidField(center geom.Vec2, radius float64) *AsteroidField {
+	return &AsteroidField{
+		Center:    center,
+		Radius:    radius,
+		Asteroids: make([]*Asteroid, 0),
+	}
+}

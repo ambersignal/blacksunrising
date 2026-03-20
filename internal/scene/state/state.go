@@ -10,7 +10,8 @@ type State struct {
 	WorldSize geom.Vec2
 
 	Ships             []*Ship            // All ships in the game
-	Asteroids         []*Asteroid        // All asteroids in the game
+	Asteroids         []*Asteroid        // All asteroids in the game (flattened from fields)
+	AsteroidFields    []*AsteroidField   // All asteroid fields (for resource management)
 	Groups            []*Group           // All groups of ships
 	Selected          map[*Ship]struct{} // Set of currently selected ships
 	CurrentGroupIndex int                // Index of the currently active group
@@ -22,6 +23,7 @@ func NewState() *State {
 	return &State{
 		Ships:             make([]*Ship, 0),
 		Asteroids:         make([]*Asteroid, 0),
+		AsteroidFields:    make([]*AsteroidField, 0),
 		Groups:            make([]*Group, 0),
 		Selected:          make(map[*Ship]struct{}),
 		CurrentGroupIndex: -1, // No group selected initially
@@ -37,6 +39,15 @@ func (s *State) AddShip(ship *Ship) {
 // AddAsteroid adds an asteroid to the state
 func (s *State) AddAsteroid(asteroid *Asteroid) {
 	s.Asteroids = append(s.Asteroids, asteroid)
+}
+
+// AddAsteroidField adds an asteroid field to the state
+func (s *State) AddAsteroidField(field *AsteroidField) {
+	s.AsteroidFields = append(s.AsteroidFields, field)
+	// Also add all asteroids from the field to the flattened list
+	for _, asteroid := range field.Asteroids {
+		s.Asteroids = append(s.Asteroids, asteroid)
+	}
 }
 
 // AddGroup adds a group to the state

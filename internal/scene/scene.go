@@ -17,6 +17,13 @@ var (
 	SelectionColor = color.RGBA{30, 188, 115, 255}
 )
 
+const (
+	AsteroidFieldMinRadius = 100
+	AsteroidFieldMaxRadius = 300
+	AsteroidFieldMinCount  = 10
+	AsteroidFieldMaxCount  = 20
+)
+
 // Scene represents the main game scene
 type Scene struct {
 	state        *state.State
@@ -110,12 +117,30 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		scene.state.AddShip(ship)
 	}
 
-	// Create asteroids in random positions
-	asteroidSize := geom.Vec2{state.AsteroidSpriteSize, state.AsteroidSpriteSize}
-	for i := 0; i < 20; i++ {
-		pos := generateRandomPosition(worldSize, asteroidSize)
-		asteroid := state.NewAsteroid(pos, asteroidImg)
-		scene.state.AddAsteroid(asteroid)
+	// Create asteroid fields using two-step generation
+	// Step 1: Generate asteroid fields at random positions (empty)
+	numAsteroidFields := rand.Intn(3) + 2 // Create 2-4 asteroid fields
+	for range numAsteroidFields {
+		pos := generateRandomPosition(worldSize, geom.FromPoint(asteroidImg.Bounds().Size()))
+		radius := AsteroidFieldMinRadius + rand.Float64()*(AsteroidFieldMaxRadius-AsteroidFieldMinRadius)
+		field := state.NewAsteroidField(pos, radius)
+
+		st.AddAsteroidField(field)
+	}
+
+	// Step 2: Populate each field with asteroids around its center
+	for _, field := range st.AsteroidFields {
+		// Generate random number of asteroids (10-20)
+		numAsteroids := rand.Intn(AsteroidFieldMaxCount-AsteroidFieldMinCount+1) + AsteroidFieldMinCount
+
+		// Generate random field radius
+		for range numAsteroids {
+			pos := generateAsteroidPosition(worldSize, field)
+			asteroid := state.NewAsteroid(pos, asteroidImg)
+
+			st.AddAsteroid(asteroid)
+			field.Asteroids = append(field.Asteroids, asteroid)
+		}
 	}
 
 	return scene, nil
@@ -268,4 +293,22 @@ func GenerateRandomVelocity() geom.Vec2 {
 		velMagnitude * math.Cos(velAngle),
 		velMagnitude * math.Sin(velAngle),
 	}
+}
+
+// generateAsteroidPosition around the field center
+func generateAsteroidPosition(worldSize geom.Vec2, field *state.AsteroidField) geom.Vec2 {
+	// Generate random direction and distance from field center
+	angle := rand.Float64() * 2 * math.Pi
+	distance := rand.Float64() * field.Radius
+
+	// Calculate offset from center
+	offset := geom.Vec2{
+		distance * math.Cos(angle),
+		distance * math.Sin(angle),
+	}
+
+	// Position relative to field center
+	pos := field.Center.Add(offset)
+
+	return pos
 }
