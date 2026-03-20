@@ -1,42 +1,44 @@
-package geom
+package geom_test
 
 import (
 	"math"
 	"testing"
+
+	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
 func TestVec2Angle(t *testing.T) {
 	tests := []struct {
 		name string
-		vec  Vec2
+		vec  geom.Vec2
 	}{
 		{
 			name: "Unit vector pointing right",
-			vec:  Vec2{1, 0},
+			vec:  geom.Vec2{1, 0},
 		},
 		{
 			name: "Unit vector pointing up",
-			vec:  Vec2{0, 1},
+			vec:  geom.Vec2{0, 1},
 		},
 		{
 			name: "Unit vector pointing left",
-			vec:  Vec2{-1, 0},
+			vec:  geom.Vec2{-1, 0},
 		},
 		{
 			name: "Unit vector pointing down",
-			vec:  Vec2{0, -1},
+			vec:  geom.Vec2{0, -1},
 		},
 		{
 			name: "Zero vector",
-			vec:  Vec2{0, 0},
+			vec:  geom.Vec2{0, 0},
 		},
 		{
 			name: "Diagonal vector",
-			vec:  Vec2{1, 1},
+			vec:  geom.Vec2{1, 1},
 		},
 		{
 			name: "Negative diagonal vector",
-			vec:  Vec2{-1, -1},
+			vec:  geom.Vec2{-1, -1},
 		},
 	}
 
@@ -66,45 +68,45 @@ func TestVec2AngleSpecificValues(t *testing.T) {
 
 	// Test vector pointing right: {1, 0}
 	// Expected angle: 0 radians (pointing right)
-	vec1 := Vec2{1, 0}
+	vec1 := geom.Vec2{1, 0}
 	angle1 := vec1.Angle()
-	expected1 := Angle(0)
+	expected1 := geom.Angle(0)
 	if math.Abs(float64(angle1-expected1)) > epsilon {
 		t.Errorf("Angle({1,0}) = %v, want %v", angle1, expected1)
 	}
 
 	// Test vector pointing up: {0, 1}
 	// Expected angle: π/2 radians (pointing up)
-	vec2 := Vec2{0, 1}
+	vec2 := geom.Vec2{0, 1}
 	angle2 := vec2.Angle()
-	expected2 := Angle(math.Pi / 2)
+	expected2 := geom.Angle(math.Pi / 2)
 	if math.Abs(float64(angle2-expected2)) > epsilon {
 		t.Errorf("Angle({0,1}) = %v, want %v", angle2, expected2)
 	}
 
 	// Test vector pointing left: {-1, 0}
 	// Expected angle: π radians (pointing left)
-	vec3 := Vec2{-1, 0}
+	vec3 := geom.Vec2{-1, 0}
 	angle3 := vec3.Angle()
-	expected3 := Angle(math.Pi)
+	expected3 := geom.Angle(math.Pi)
 	if math.Abs(float64(angle3-expected3)) > epsilon {
 		t.Errorf("Angle({-1,0}) = %v, want %v", angle3, expected3)
 	}
 
 	// Test vector pointing down: {0, -1}
 	// Expected angle: -π/2 radians (pointing down)
-	vec4 := Vec2{0, -1}
+	vec4 := geom.Vec2{0, -1}
 	angle4 := vec4.Angle()
-	expected4 := Angle(-math.Pi / 2)
+	expected4 := geom.Angle(-math.Pi / 2)
 	if math.Abs(float64(angle4-expected4)) > epsilon {
 		t.Errorf("Angle({0,-1}) = %v, want %v", angle4, expected4)
 	}
 
 	// Test diagonal vector: {1, 1}
 	// Expected angle: π/4 radians (45 degrees)
-	vec5 := Vec2{1, 1}
+	vec5 := geom.Vec2{1, 1}
 	angle5 := vec5.Angle()
-	expected5 := Angle(math.Pi / 4)
+	expected5 := geom.Angle(math.Pi / 4)
 	if math.Abs(float64(angle5-expected5)) > epsilon {
 		t.Errorf("Angle({1,1}) = %v, want %v", angle5, expected5)
 	}
@@ -114,7 +116,7 @@ func TestVec2AngleProperties(t *testing.T) {
 	// Test various properties of the angle method
 
 	// Test that all angles are in the valid range after normalization
-	vectors := []Vec2{
+	vectors := []geom.Vec2{
 		{1, 0}, {0, 1}, {-1, 0}, {0, -1},
 		{1, 1}, {-1, 1}, {-1, -1}, {1, -1},
 		{3, 4}, {-2, 5}, {7, -3}, {-4, -6},
@@ -144,17 +146,17 @@ func TestVec2AngleConsistency(t *testing.T) {
 	// Test that angle calculation is consistent with trigonometric expectations
 
 	tests := []struct {
-		vec      Vec2
-		expected Angle
+		vec      geom.Vec2
+		expected geom.Angle
 	}{
-		{Vec2{1, 0}, 0},
-		{Vec2{0, 1}, math.Pi / 2},
-		{Vec2{-1, 0}, math.Pi},
-		{Vec2{0, -1}, -math.Pi / 2},
-		{Vec2{1, 1}, math.Pi / 4},
-		{Vec2{-1, 1}, 3 * math.Pi / 4},
-		{Vec2{-1, -1}, -3 * math.Pi / 4},
-		{Vec2{1, -1}, -math.Pi / 4},
+		{geom.Vec2{1, 0}, 0},
+		{geom.Vec2{0, 1}, math.Pi / 2},
+		{geom.Vec2{-1, 0}, math.Pi},
+		{geom.Vec2{0, -1}, -math.Pi / 2},
+		{geom.Vec2{1, 1}, math.Pi / 4},
+		{geom.Vec2{-1, 1}, 3 * math.Pi / 4},
+		{geom.Vec2{-1, -1}, -3 * math.Pi / 4},
+		{geom.Vec2{1, -1}, -math.Pi / 4},
 	}
 
 	const epsilon = 1e-10

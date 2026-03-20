@@ -5,6 +5,10 @@ import (
 	"math"
 )
 
+const (
+	half = 2.0
+)
+
 // Rectangle represents a rectangle defined by its minimum and maximum corners.
 // The rectangle is defined such that Min contains the lower bounds and Max contains the upper bounds.
 type Rectangle struct {
@@ -58,7 +62,7 @@ func (r Rectangle) Add(v Vec2) Rectangle {
 // Center returns the center point of the rectangle.
 // The center is calculated as the midpoint between the minimum and maximum corners.
 func (r Rectangle) Center() Vec2 {
-	return r.Max.Add(r.Min).Mul(0.5)
+	return r.Max.Add(r.Min).Div(half)
 }
 
 // Size returns the dimensions of the rectangle as a vector.

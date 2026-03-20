@@ -26,33 +26,33 @@ var (
 	BackgroundColor = color.RGBA{15, 13, 14, 255}
 )
 
-// FIXME(elemir): hardcoded layout
+// FIXME(elemir): hardcoded layout.
 const (
 	Height = 540
 	Width  = 960
 )
 
-// Scene represents a game scene
+// Scene represents a game scene.
 type Scene interface {
 	Update() error
 	Draw(screen *ebiten.Image)
 }
 
-// Game represents the main game structure that implements ebiten.Game interface
+// Game represents the main game structure that implements ebiten.Game interface.
 type Game struct {
 	ui    *ebitenui.UI
 	scene Scene
 	state GameState
 }
 
-// NewGame creates a new game instance
+// NewGame creates a new game instance.
 func NewGame(scene Scene) *Game {
 	return &Game{
 		scene: scene,
 	}
 }
 
-// Update updates the game logic
+// Update updates the game logic.
 func (g *Game) Update() error {
 	switch g.state {
 	case GameStateMainMenu:
@@ -66,7 +66,7 @@ func (g *Game) Update() error {
 	return nil
 }
 
-// Draw renders the game screen
+// Draw renders the game screen.
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(BackgroundColor)
 
@@ -75,11 +75,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.ui.Draw(screen)
 	case GameStateLaunched:
 		g.scene.Draw(screen)
+	case GameStateTerminated:
+		// Do nothing, game is terminated
 	}
 }
 
-// Layout returns the game's screen size
-func (g *Game) Layout(w, h int) (int, int) {
+// Layout returns the game's screen size.
+func (g *Game) Layout(_, _ int) (int, int) {
 	return Width, Height
 }
 
@@ -101,14 +103,14 @@ func run() error {
 		Menu{
 			MenuButton{
 				Text: "New Game",
-				OnPress: func(args *widget.ButtonClickedEventArgs) {
+				OnPress: func(*widget.ButtonClickedEventArgs) {
 					game.state = GameStateLaunched
 				},
 			},
 			menuButton("Load Game"),
 			MenuButton{
 				Text: "Exit",
-				OnPress: func(args *widget.ButtonClickedEventArgs) {
+				OnPress: func(*widget.ButtonClickedEventArgs) {
 					game.state = GameStateTerminated
 				},
 			},
@@ -125,8 +127,8 @@ func run() error {
 	ebiten.SetFullscreen(true)
 	ebiten.SetWindowTitle("Black Sun Rising")
 
-	if err := ebiten.RunGame(game); err != nil {
-		return fmt.Errorf("game run: %w", err)
+	if runErr := ebiten.RunGame(game); runErr != nil {
+		return fmt.Errorf("game run: %w", runErr)
 	}
 
 	return nil

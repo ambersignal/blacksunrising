@@ -10,21 +10,21 @@ import (
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
-// InputHandler handles all input-related logic for the game
+// InputHandler handles all input-related logic for the game.
 type InputHandler struct {
 	state      *state.State
 	isDragging bool
 	selection  geom.Rectangle
 }
 
-// NewInputHandler creates a new input handler
+// NewInputHandler creates a new input handler.
 func NewInputHandler(state *state.State) *InputHandler {
 	return &InputHandler{
 		state: state,
 	}
 }
 
-// Update processes input for the current frame
+// Update processes input for the current frame.
 func (ih *InputHandler) Update() error {
 	cursorPos := ih.CursorPosition()
 	// Check for ESC key to exit
@@ -58,18 +58,15 @@ func (ih *InputHandler) Update() error {
 			ih.selection.Max = worldCursorPos
 			ih.selection = ih.selection.Normalize()
 		}
-	} else {
-		// Left mouse button released
-		if ih.isDragging {
-			// Process the selection
-			ih.processSelection()
-			ih.isDragging = false
-		}
+	} else if ih.isDragging {
+		// Process the selection
+		ih.processSelection()
+		ih.isDragging = false
 	}
 
 	// Check for right mouse click to set target position for the current group
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) && ih.state.CurrentGroupIndex >= 0 {
-		cursorPos := ih.CursorPosition()
+		cursorPos = ih.CursorPosition()
 
 		// Adjust target for camera offset
 		cameraOffset := ih.state.Camera.Min
@@ -85,7 +82,7 @@ func (ih *InputHandler) Update() error {
 	return nil
 }
 
-// updateCamera moves the camera when mouse is near screen bounds
+// updateCamera moves the camera when mouse is near screen bounds.
 func (ih *InputHandler) updateCamera() {
 	cursorPosition := ih.CursorPosition()
 
@@ -112,19 +109,19 @@ func (ih *InputHandler) CursorPosition() geom.Vec2 {
 	return geom.FromPoint(image.Pt(ebiten.CursorPosition()))
 }
 
-// isCursorOnMinimap checks if a click position is within the minimap area
+// isCursorOnMinimap checks if a click position is within the minimap area.
 func (ih *InputHandler) isCursorOnMinimap(clickPos geom.Vec2) bool {
 	return clickPos.IsInsideRect(ih.state.MiniMap)
 }
 
-// handleMinimapClick centers the camera on the clicked position in the minimap
+// handleMinimapClick centers the camera on the clicked position in the minimap.
 func (ih *InputHandler) handleMinimapClick(clickPos geom.Vec2) {
 	clickedWorldPos := ih.state.MinimapScreenToWorld(clickPos)
 
 	ih.state.MoveCameraTo(clickedWorldPos)
 }
 
-// processSelection handles the creation of new groups based on selection
+// processSelection handles the creation of new groups based on selection.
 func (ih *InputHandler) processSelection() {
 	// Clear current selection
 	for ship := range ih.state.Selected {
@@ -159,7 +156,7 @@ func (ih *InputHandler) processSelection() {
 	ih.state.CurrentGroupIndex = len(ih.state.Groups) - 1
 }
 
-// IsDragging returns whether we're currently dragging for selection
+// IsDragging returns whether we're currently dragging for selection.
 func (ih *InputHandler) IsDragging() bool {
 	return ih.isDragging
 }

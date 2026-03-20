@@ -15,13 +15,13 @@ var (
 	selectionColor = color.RGBA{30, 188, 115, 200}
 )
 
-// Global constants for ship movement limits
+// Global constants for ship movement limits.
 const (
 	MaxSpeed         = 256.0       // Maximum speed in pixels per second
 	MaxRotationSpeed = math.Pi / 4 // Maximum rotation speed in radians per second
 )
 
-// Ship represents a ship in the game
+// Ship represents a ship in the game.
 type Ship struct {
 	Pos        geom.Vec2
 	Image      *ebiten.Image
@@ -31,7 +31,7 @@ type Ship struct {
 	IsSelected bool // Whether this ship is currently selected
 }
 
-// NewShip creates a new ship with the specified position, velocity, and image
+// NewShip creates a new ship with the specified position, velocity, and image.
 func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 	return &Ship{
 		Pos:      pos,
@@ -44,7 +44,7 @@ func NewShip(pos geom.Vec2, vel geom.Vec2, img *ebiten.Image) *Ship {
 	}
 }
 
-// Update updates the ship's state
+// Update updates the ship's state.
 func (s *Ship) Update(elapsedTime time.Duration) error {
 	// Convert elapsed time to seconds for calculations
 	deltaSeconds := elapsedTime.Seconds()
@@ -66,7 +66,7 @@ func (s *Ship) Update(elapsedTime time.Duration) error {
 	return nil
 }
 
-// Draw renders the ship with an optional camera offset
+// Draw renders the ship with an optional camera offset.
 func (s *Ship) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	if s.Image == nil {
 		return

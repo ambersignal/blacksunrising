@@ -22,26 +22,33 @@ const (
 	AsteroidMaxCycleTime = 5 * time.Second
 )
 
-// Asteroid represents an asteroid in the game
+// Asteroid represents an asteroid in the game.
 type Asteroid struct {
 	Pos       geom.Vec2
 	Animation *animation.Animation
 }
 
-// NewAsteroid creates a new asteroid with the specified position and spritesheet
+// NewAsteroid creates a new asteroid with the specified position and spritesheet.
 func NewAsteroid(pos geom.Vec2, img *ebiten.Image) *Asteroid {
 	return &Asteroid{
-		Pos:       pos,
-		Animation: animation.NewWithRandomSpeed(img, AsteroidSpriteSize, AsteroidSpriteCount, AsteroidSpriteCols, AsteroidMinCycleTime, AsteroidMaxCycleTime),
+		Pos: pos,
+		Animation: animation.NewWithRandomSpeed(
+			img,
+			AsteroidSpriteSize,
+			AsteroidSpriteCount,
+			AsteroidSpriteCols,
+			AsteroidMinCycleTime,
+			AsteroidMaxCycleTime,
+		),
 	}
 }
 
-// Update updates the asteroid's animation state
+// Update updates the asteroid's animation state.
 func (a *Asteroid) Update(elapsedTime time.Duration) {
 	a.Animation.Update(elapsedTime)
 }
 
-// Draw renders the asteroid with an optional camera offset
+// Draw renders the asteroid with an optional camera offset.
 func (a *Asteroid) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	drawPos := a.Pos
 	if len(cameraOffset) > 0 {
@@ -52,19 +59,19 @@ func (a *Asteroid) Draw(screen *ebiten.Image, cameraOffset ...geom.Vec2) {
 	a.Animation.Draw(screen, drawX, drawY)
 }
 
-// Radius returns the radius of the asteroid for collision detection
+// Radius returns the radius of the asteroid for collision detection.
 func (a *Asteroid) Radius() float64 {
 	return float64(AsteroidSpriteSize) / 2
 }
 
-// AsteroidField represents a clustered field of asteroids
+// AsteroidField represents a clustered field of asteroids.
 type AsteroidField struct {
 	Center    geom.Vec2
 	Radius    float64
 	Asteroids []*Asteroid
 }
 
-// NewAsteroidField creates a new empty asteroid field at the specified position
+// NewAsteroidField creates a new empty asteroid field at the specified position.
 func NewAsteroidField(center geom.Vec2, radius float64) *AsteroidField {
 	return &AsteroidField{
 		Center:    center,

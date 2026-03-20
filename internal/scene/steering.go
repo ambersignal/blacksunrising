@@ -5,13 +5,19 @@ import (
 	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
+const (
+	DesiredVelocity  = 50.0
+	SeekStopDistance = 5.0
+)
+
+// MaxSeparation is the maximum distance for separation behavior.
+// FIXME(evgenii.omelchenko): should depends on ship size.
 var (
-	// FIXME(evgenii.omelchenko): should depends on ship size
 	MaxSeparation = 64.0
 	MinSeparation = 0.0
 )
 
-// Alignment calculates alignment force for a ship based on nearby ships in the same group
+// Alignment calculates alignment force for a ship based on nearby ships in the same group.
 func (g *Scene) Alignment(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.state.GetGroupForShip(ship)
@@ -50,7 +56,7 @@ func (g *Scene) Alignment(ship *state.Ship) geom.Vec2 {
 
 	// Steer towards desired velocity
 	if average.Length() > 0 {
-		average = average.Normalize().Mul(50) // Desired velocity
+		average = average.Normalize().Mul(DesiredVelocity)
 	}
 
 	// Reynolds steering: subtract current velocity to get steering force
@@ -58,7 +64,7 @@ func (g *Scene) Alignment(ship *state.Ship) geom.Vec2 {
 	return steer
 }
 
-// Separation calculates separation force for a ship based on nearby ships in the same group
+// Separation calculates separation force for a ship based on nearby ships in the same group.
 func (g *Scene) Separation(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.state.GetGroupForShip(ship)
@@ -112,7 +118,7 @@ func (g *Scene) Separation(ship *state.Ship) geom.Vec2 {
 	return steer
 }
 
-// Cohesion calculates cohesion force for a ship based on nearby ships in the same group
+// Cohesion calculates cohesion force for a ship based on nearby ships in the same group.
 func (g *Scene) Cohesion(ship *state.Ship) geom.Vec2 {
 	// Find which group this ship belongs to
 	group := g.state.GetGroupForShip(ship)
@@ -163,13 +169,13 @@ func (g *Scene) Cohesion(ship *state.Ship) geom.Vec2 {
 	return steer
 }
 
-// Seek calculates a steering force to move a ship toward a target position
+// Seek calculates a steering force to move a ship toward a target position.
 func (g *Scene) Seek(ship *state.Ship, target geom.Vec2) geom.Vec2 {
 	// Calculate desired velocity toward target
 	desired := target.Sub(ship.Pos)
 
 	// If we're very close to the target, stop moving
-	if desired.Length() < 5.0 {
+	if desired.Length() < SeekStopDistance {
 		// Slow down gradually
 		return ship.Vel.Mul(-1.0) // Counteract current velocity
 	}

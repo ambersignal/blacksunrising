@@ -17,13 +17,13 @@ var (
 	MinimapAsteroidColor = color.RGBA{220, 140, 90, 255}  // Brown for asteroids
 )
 
-// MiniMap represents the minimap component
+// MiniMap represents the minimap component.
 type MiniMap struct {
 	state  *state.State
 	shader *ebiten.Shader
 }
 
-// NewMiniMap creates a new minimap with shader
+// NewMiniMap creates a new minimap with shader.
 func NewMiniMap(state *state.State) (*MiniMap, error) {
 	shader, err := data.LoadShader("map")
 	if err != nil {
@@ -36,7 +36,7 @@ func NewMiniMap(state *state.State) (*MiniMap, error) {
 	}, nil
 }
 
-// Draw renders the minimap on the screen
+// Draw renders the minimap on the screen.
 func (m *MiniMap) Draw(screen *ebiten.Image, time float32) {
 	minimapPos := m.state.MiniMap.Min
 	minimapSize := m.state.MiniMap.Size()
@@ -87,7 +87,7 @@ func (m *MiniMap) Draw(screen *ebiten.Image, time float32) {
 	}
 }
 
-// Dispose releases the shader resources
+// Dispose releases the shader resources.
 func (m *MiniMap) Dispose() {
 	if m.shader != nil {
 		m.shader.Deallocate()

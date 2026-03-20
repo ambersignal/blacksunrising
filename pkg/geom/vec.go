@@ -139,7 +139,7 @@ func (v Vec2) Unpack() (float64, float64) {
 	return v[0], v[1]
 }
 
-// Unpack returns the X and Y components of the vector as a slice of the float32 values.
+// AsFloat32Slice returns the X and Y components of the vector as a slice of the float32 values.
 func (v Vec2) AsFloat32Slice() []float32 {
 	return []float32{
 		float32(v[0]),

@@ -2,20 +2,20 @@ package animation
 
 import (
 	"image"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type Animation struct {
-	Image           *ebiten.Image
-	SpriteSize      int
-	SpriteCount     int
-	Cols            int
-	FrameDuration   time.Duration
-	currentFrame    int
-	animationTimer  float64
+	Image          *ebiten.Image
+	SpriteSize     int
+	SpriteCount    int
+	Cols           int
+	FrameDuration  time.Duration
+	currentFrame   int
+	animationTimer float64
 }
 
 func New(img *ebiten.Image, spriteSize, spriteCount, cols int, frameDuration time.Duration) *Animation {
@@ -25,12 +25,16 @@ func New(img *ebiten.Image, spriteSize, spriteCount, cols int, frameDuration tim
 		SpriteCount:    spriteCount,
 		Cols:           cols,
 		FrameDuration:  frameDuration,
-		currentFrame:   rand.Intn(spriteCount),
+		currentFrame:   rand.N(spriteCount),
 		animationTimer: 0,
 	}
 }
 
-func NewWithRandomSpeed(img *ebiten.Image, spriteSize, spriteCount, cols int, minCycle, maxCycle time.Duration) *Animation {
+func NewWithRandomSpeed(
+	img *ebiten.Image,
+	spriteSize, spriteCount, cols int,
+	minCycle, maxCycle time.Duration,
+) *Animation {
 	minFrameDur := minCycle.Seconds() / float64(spriteCount)
 	maxFrameDur := maxCycle.Seconds() / float64(spriteCount)
 	frameDuration := time.Duration((minFrameDur + rand.Float64()*(maxFrameDur-minFrameDur)) * float64(time.Second))
@@ -41,7 +45,7 @@ func NewWithRandomSpeed(img *ebiten.Image, spriteSize, spriteCount, cols int, mi
 		SpriteCount:    spriteCount,
 		Cols:           cols,
 		FrameDuration:  frameDuration,
-		currentFrame:   rand.Intn(spriteCount),
+		currentFrame:   rand.N(spriteCount),
 		animationTimer: 0,
 	}
 }
@@ -73,7 +77,8 @@ func (a *Animation) Draw(screen *ebiten.Image, x, y float64) {
 		srcX+a.SpriteSize, srcY+a.SpriteSize,
 	)
 
-	frameImg := a.Image.SubImage(srcRect).(*ebiten.Image)
+	// SubImage returns a valid image for valid rectangle, ignore any errors
+	frameImg, _ := a.Image.SubImage(srcRect).(*ebiten.Image)
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(x, y)

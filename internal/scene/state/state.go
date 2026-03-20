@@ -2,7 +2,7 @@ package state
 
 import "github.com/ambersignal/blacksunrising/pkg/geom"
 
-// State holds all the game state information
+// State holds all the game state information.
 type State struct {
 	Camera  geom.Rectangle // Camera viewpoint
 	MiniMap geom.Rectangle
@@ -18,7 +18,7 @@ type State struct {
 	Planet            *Planet            // The planet in the game world
 }
 
-// NewState creates a new game state
+// NewState creates a new game state.
 func NewState() *State {
 	return &State{
 		Ships:             make([]*Ship, 0),
@@ -31,31 +31,29 @@ func NewState() *State {
 	}
 }
 
-// AddShip adds a ship to the state
+// AddShip adds a ship to the state.
 func (s *State) AddShip(ship *Ship) {
 	s.Ships = append(s.Ships, ship)
 }
 
-// AddAsteroid adds an asteroid to the state
+// AddAsteroid adds an asteroid to the state.
 func (s *State) AddAsteroid(asteroid *Asteroid) {
 	s.Asteroids = append(s.Asteroids, asteroid)
 }
 
-// AddAsteroidField adds an asteroid field to the state
+// AddAsteroidField adds an asteroid field to the state.
 func (s *State) AddAsteroidField(field *AsteroidField) {
 	s.AsteroidFields = append(s.AsteroidFields, field)
 	// Also add all asteroids from the field to the flattened list
-	for _, asteroid := range field.Asteroids {
-		s.Asteroids = append(s.Asteroids, asteroid)
-	}
+	s.Asteroids = append(s.Asteroids, field.Asteroids...)
 }
 
-// AddGroup adds a group to the state
+// AddGroup adds a group to the state.
 func (s *State) AddGroup(group *Group) {
 	s.Groups = append(s.Groups, group)
 }
 
-// CleanupEmptyGroups removes groups that have no ships
+// CleanupEmptyGroups removes groups that have no ships.
 func (s *State) CleanupEmptyGroups() {
 	// Iterate backwards to safely remove elements
 	for i := len(s.Groups) - 1; i >= 0; i-- {
@@ -78,7 +76,7 @@ func (s *State) CleanupEmptyGroups() {
 	}
 }
 
-// GetGroupForShip returns the group that contains the ship, or nil if not in any group
+// GetGroupForShip returns the group that contains the ship, or nil if not in any group.
 func (s *State) GetGroupForShip(ship *Ship) *Group {
 	for _, group := range s.Groups {
 		if group.Contains(ship) {
@@ -88,7 +86,7 @@ func (s *State) GetGroupForShip(ship *Ship) *Group {
 	return nil
 }
 
-// RemoveSelectedFromAllGroups removes selected ships from all existing groups
+// RemoveSelectedFromAllGroups removes selected ships from all existing groups.
 func (s *State) RemoveSelectedFromAllGroups() {
 	// For each selected ship, remove it from any group it might be in
 	for ship := range s.Selected {

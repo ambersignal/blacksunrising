@@ -85,14 +85,14 @@ func (m Menu) Render(rndrCtx RenderContext) (widget.PreferredSizeLocateableWidge
 
 	var errs []error
 	for _, item := range m {
-		widget, err := item.Render(rndrCtx)
+		w, renderErr := item.Render(rndrCtx)
 
-		if err != nil {
-			errs = append(errs, err)
+		if renderErr != nil {
+			errs = append(errs, renderErr)
 			continue
 		}
 
-		container.AddChild(widget)
+		container.AddChild(w)
 	}
 
 	if errs != nil {

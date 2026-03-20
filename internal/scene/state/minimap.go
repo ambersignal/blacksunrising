@@ -2,7 +2,7 @@ package state
 
 import "github.com/ambersignal/blacksunrising/pkg/geom"
 
-// MinimapScreenToWorld converts minimap screen coordinates to world coordinates
+// MinimapScreenToWorld converts minimap screen coordinates to world coordinates.
 func (s *State) MinimapScreenToWorld(pos geom.Vec2) geom.Vec2 {
 	// Calculate the position within the minimap's inner area
 	innerPos := pos.Sub(s.MiniMap.Min)

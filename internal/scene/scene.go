@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/ambersignal/blacksunrising/internal/scene/state"
@@ -22,9 +22,18 @@ const (
 	AsteroidFieldMaxRadius = 300
 	AsteroidFieldMinCount  = 10
 	AsteroidFieldMaxCount  = 20
+
+	AlignmentWeight    = 1.0
+	SeparationWeight   = 2.5
+	CohesionWeight     = 1.0
+	SeekWeight         = 2.0
+	VelocityMin        = 10.0
+	VelocityMagnitude  = 20.0
+	ShipCountRangeSize = 11
+	ShipCountMin       = 10
 )
 
-// Scene represents the main game scene
+// Scene represents the main game scene.
 type Scene struct {
 	state        *state.State
 	inputHandler *InputHandler
@@ -36,7 +45,7 @@ type Scene struct {
 	updatedTime time.Time
 }
 
-// NewScene creates a new game scene
+// NewScene creates a new game scene.
 func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	st := state.NewState()
 	st.Camera = geom.Rectangle{
@@ -103,8 +112,8 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	scene.planet = planetRenderer
 
 	// Create multiple ships in random positions with random velocities
-	numShips := rand.Intn(11) + 10 // Create 10-20 ships
-	for i := 0; i < numShips; i++ {
+	numShips := rand.N(ShipCountRangeSize) + ShipCountMin
+	for range numShips {
 		// Generate random position within world bounds
 		pos := generateRandomPosition(worldSize,
 			geom.FromPoint(shipImg.Bounds().Min))
@@ -119,7 +128,7 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 
 	// Create asteroid fields using two-step generation
 	// Step 1: Generate asteroid fields at random positions (empty)
-	numAsteroidFields := rand.Intn(3) + 2 // Create 2-4 asteroid fields
+	numAsteroidFields := rand.N(3) + 2
 	for range numAsteroidFields {
 		pos := generateRandomPosition(worldSize, geom.FromPoint(asteroidImg.Bounds().Size()))
 		radius := AsteroidFieldMinRadius + rand.Float64()*(AsteroidFieldMaxRadius-AsteroidFieldMinRadius)
@@ -131,7 +140,7 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	// Step 2: Populate each field with asteroids around its center
 	for _, field := range st.AsteroidFields {
 		// Generate random number of asteroids (10-20)
-		numAsteroids := rand.Intn(AsteroidFieldMaxCount-AsteroidFieldMinCount+1) + AsteroidFieldMinCount
+		numAsteroids := rand.N(AsteroidFieldMaxCount-AsteroidFieldMinCount+1) + AsteroidFieldMinCount
 
 		// Generate random field radius
 		for range numAsteroids {
@@ -146,7 +155,7 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	return scene, nil
 }
 
-// Update updates the game logic
+// Update updates the game logic.
 func (g *Scene) Update() error {
 	// Calculate elapsed time since last frame
 	elapsedTime := time.Since(g.updatedTime)
@@ -181,10 +190,10 @@ func (g *Scene) Update() error {
 
 		// Apply forces to ship's acceleration
 		// These weights can be adjusted to change behavior
-		ship.Accel = ship.Accel.Add(alignForce.Mul(1.0))
-		ship.Accel = ship.Accel.Add(separateForce.Mul(2.5))
-		ship.Accel = ship.Accel.Add(cohesionForce.Mul(1.0))
-		ship.Accel = ship.Accel.Add(seekForce.Mul(2.0)) // Stronger seek force
+		ship.Accel = ship.Accel.Add(alignForce.Mul(AlignmentWeight))
+		ship.Accel = ship.Accel.Add(separateForce.Mul(SeparationWeight))
+		ship.Accel = ship.Accel.Add(cohesionForce.Mul(CohesionWeight))
+		ship.Accel = ship.Accel.Add(seekForce.Mul(SeekWeight))
 	}
 
 	// Update all ships
@@ -202,7 +211,7 @@ func (g *Scene) Update() error {
 	return nil
 }
 
-// Draw renders the game screen
+// Draw renders the game screen.
 func (g *Scene) Draw(screen *ebiten.Image) {
 	elapsed := time.Since(g.startTime)
 	// Draw nebula background first
@@ -212,7 +221,6 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 
 	// Draw planet
 	if g.planet != nil && g.state.Planet != nil {
-		elapsed := time.Since(g.startTime)
 		g.planet.Draw(screen, g.state.Planet, g.state.Camera.Min, float64(elapsed.Seconds()))
 	}
 
@@ -244,7 +252,7 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	g.minimap.Draw(screen, float32(elapsed.Seconds()))
 }
 
-// isShipInView checks if a ship is within the camera view
+// isShipInView checks if a ship is within the camera view.
 func (g *Scene) isShipInView(ship *state.Ship, cameraRect geom.Rectangle) bool {
 	if ship.Image == nil {
 		return false
@@ -262,7 +270,7 @@ func (g *Scene) isShipInView(ship *state.Ship, cameraRect geom.Rectangle) bool {
 	return cameraRect.IntersectsCircle(ship.Pos, float64(radius))
 }
 
-// isAsteroidInView checks if an asteroid is within the camera view
+// isAsteroidInView checks if an asteroid is within the camera view.
 func (g *Scene) isAsteroidInView(asteroid *state.Asteroid, cameraRect geom.Rectangle) bool {
 	if asteroid.Animation == nil || asteroid.Animation.Image == nil {
 		return false
@@ -275,17 +283,17 @@ func (g *Scene) isAsteroidInView(asteroid *state.Asteroid, cameraRect geom.Recta
 	return cameraRect.IntersectsCircle(asteroid.Pos, radius)
 }
 
-// generateRandomPosition creates a random position within world bounds
+// generateRandomPosition creates a random position within world bounds.
 func generateRandomPosition(worldSize geom.Vec2, shipSize geom.Vec2) geom.Vec2 {
 	return worldSize.Sub(shipSize).
 		HadamardProduct(geom.RandVec2()).
-		Add(shipSize.Mul(0.5))
+		Add(shipSize.Div(2))
 }
 
-// GenerateRandomVelocity creates a random velocity vector with magnitude between 0 and 50 pixels per second
+// GenerateRandomVelocity creates a random velocity vector with magnitude between 0 and 50 pixels per second.
 func GenerateRandomVelocity() geom.Vec2 {
-	// Generate random velocity between 10 and 30 pixels per second for better flocking
-	velMagnitude := 20*rand.Float64() + 10
+	// Generate random velocity between VelocityMin and VelocityMin+VelocityMagnitude for better flocking
+	velMagnitude := VelocityMagnitude*rand.Float64() + VelocityMin
 
 	// Generate random direction for velocity vector
 	velAngle := rand.Float64() * 2 * math.Pi
@@ -295,8 +303,8 @@ func GenerateRandomVelocity() geom.Vec2 {
 	}
 }
 
-// generateAsteroidPosition around the field center
-func generateAsteroidPosition(worldSize geom.Vec2, field *state.AsteroidField) geom.Vec2 {
+// generateAsteroidPosition around the field center.
+func generateAsteroidPosition(_ geom.Vec2, field *state.AsteroidField) geom.Vec2 {
 	// Generate random direction and distance from field center
 	angle := rand.Float64() * 2 * math.Pi
 	distance := rand.Float64() * field.Radius
