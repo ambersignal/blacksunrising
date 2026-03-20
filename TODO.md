@@ -1,11 +1,8 @@
 - [ ] Avoidance for the bound of the map
-- [x] Camera
-- [x] Minimap
 - [ ] Control menu
 - [ ] Music
 - [ ] Different type of the ships
 - [ ] Building of the new ships
-- [ ] Background
-- [ ] Sun
 - [ ] Asteroids
 - [ ] Resource collection
+- [ ] Prepare single pallete for more consistent visual experience

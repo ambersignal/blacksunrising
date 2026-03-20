@@ -39,13 +39,19 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 
 	// FIXME(evgenii.omelchenko): hardcoded miniMapSizes
 	miniMapPos := geom.Vec2{
-		cameraSize[0] - 60,
+		cameraSize[0] - 110,
 		10,
 	}
 
 	st.MiniMap = geom.Rectangle{
 		Min: miniMapPos,
-		Max: miniMapPos.Add(geom.Vec2{50, 50}),
+		Max: miniMapPos.Add(geom.Vec2{100, 100}),
+	}
+
+	// Create the minimap
+	minimap, err := NewMiniMap(st)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load minimap: %w", err)
 	}
 
 	scene := &Scene{
@@ -53,7 +59,7 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 		updatedTime: time.Now(),
 
 		state:   st,
-		minimap: NewMiniMap(st),
+		minimap: minimap,
 	}
 
 	// Initialize input handler
@@ -64,13 +70,6 @@ func NewScene(worldSize geom.Vec2, cameraSize geom.Vec2) (*Scene, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Load the minimap image
-	minimapImg, err := LoadMiniMapImage()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load minimap image: %w", err)
-	}
-	scene.minimap.Image = minimapImg
 
 	// Load the nebula background
 	nebulaBg, err := NewNebulaBackground()
@@ -161,10 +160,10 @@ func (g *Scene) Update() error {
 
 // Draw renders the game screen
 func (g *Scene) Draw(screen *ebiten.Image) {
+	elapsed := time.Since(g.startTime)
 	// Draw nebula background first
 	if g.nebula != nil {
-		elapsed := time.Since(g.startTime)
-		g.nebula.Draw(screen, g.state.Camera.Min, float64(elapsed.Seconds()))
+		g.nebula.Draw(screen, g.state.Camera.Min, float32(elapsed.Seconds()))
 	}
 
 	// Draw planet
@@ -191,7 +190,7 @@ func (g *Scene) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw minimap in the top-right corner
-	g.minimap.Draw(screen)
+	g.minimap.Draw(screen, float32(elapsed.Seconds()))
 }
 
 // isShipInView checks if a ship is within the camera view

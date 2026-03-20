@@ -5,9 +5,9 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/ambersignal/blacksunrising/data"
 	"github.com/ambersignal/blacksunrising/internal/scene/state"
 	"github.com/ambersignal/blacksunrising/pkg/draw"
-	"github.com/ambersignal/blacksunrising/pkg/geom"
 )
 
 var (
@@ -18,43 +18,48 @@ var (
 
 // MiniMap represents the minimap component
 type MiniMap struct {
-	state *state.State
-
-	BorderSize float64
-	Image      *ebiten.Image
+	state  *state.State
+	shader *ebiten.Shader
 }
 
-// NewMiniMap creates a new minimap with default size
-func NewMiniMap(state *state.State) *MiniMap {
-	return &MiniMap{
-		state: state,
-
-		BorderSize: 3.0, // 56x56 image with 50x50 inner area = 3px border on each side
+// NewMiniMap creates a new minimap with shader
+func NewMiniMap(state *state.State) (*MiniMap, error) {
+	shader, err := data.LoadShader("map")
+	if err != nil {
+		return nil, err
 	}
+
+	return &MiniMap{
+		state:  state,
+		shader: shader,
+	}, nil
 }
 
 // Draw renders the minimap on the screen
-func (m *MiniMap) Draw(screen *ebiten.Image) {
-	borderSize := geom.Vec2{
-		m.BorderSize,
-		m.BorderSize,
+func (m *MiniMap) Draw(screen *ebiten.Image, time float32) {
+	minimapPos := m.state.MiniMap.Min
+	minimapSize := m.state.MiniMap.Size()
+
+	// Draw the minimap shader
+	op := &ebiten.DrawRectShaderOptions{}
+	op.GeoM.Translate(minimapPos[0], minimapPos[1])
+
+	op.Uniforms = map[string]any{
+		"Time": time,
+		"Size": minimapSize.AsFloat32Slice(),
 	}
 
-	minimapPos := m.state.MiniMap.Min
-	// Draw the minimap image
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(minimapPos[0], minimapPos[1])
-	screen.DrawImage(m.Image, opts)
+	screen.DrawRectShader(int(minimapSize[0]), int(minimapSize[1]), m.shader, op)
 
 	// Draw camera viewport indicator
 	// Convert camera rectangle to normalized coordinates
 	cameraNormalized := m.state.Camera.HadamardDivide(m.state.WorldSize)
 
 	cameraMinimap := cameraNormalized.HadamardProduct(m.state.MiniMap.Size()).
-		Add(borderSize).Add(m.state.MiniMap.Min)
+		Add(m.state.MiniMap.Min)
 	draw.StrokeRect(screen, cameraMinimap, 1, MinimapViewportColor)
 
-	// Draw all ships on minimap within the inner area
+	// Draw all ships on minimap
 	for _, ship := range m.state.Ships {
 		// Convert world coordinates to normalized coordinates
 		normalizedPos := ship.Pos.HadamardDevide(m.state.WorldSize).
@@ -68,5 +73,13 @@ func (m *MiniMap) Draw(screen *ebiten.Image) {
 
 		// Draw small dot for ship
 		draw.Pixel(screen, normalizedPos, shipColor)
+	}
+}
+
+// Dispose releases the shader resources
+func (m *MiniMap) Dispose() {
+	if m.shader != nil {
+		m.shader.Deallocate()
+		m.shader = nil
 	}
 }

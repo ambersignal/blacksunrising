@@ -25,7 +25,7 @@ func NewNebulaBackground() (*NebulaBackground, error) {
 	}, nil
 }
 
-func (n *NebulaBackground) Draw(screen *ebiten.Image, camera geom.Vec2, time float64) {
+func (n *NebulaBackground) Draw(screen *ebiten.Image, camera geom.Vec2, time float32) {
 	bounds := screen.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
@@ -34,9 +34,9 @@ func (n *NebulaBackground) Draw(screen *ebiten.Image, camera geom.Vec2, time flo
 	op := &ebiten.DrawRectShaderOptions{}
 	op.GeoM.Translate(0, 0)
 	op.Uniforms = map[string]any{
-		"Time":           float32(time),
+		"Time":           time,
 		"ScreenSize":     []float32{float32(width), float32(height)},
-		"CameraPosition": []float32{float32(camera[0]), float32(camera[1])},
+		"CameraPosition": camera.AsFloat32Slice(),
 	}
 
 	screen.DrawRectShader(width, height, n.shader, op)

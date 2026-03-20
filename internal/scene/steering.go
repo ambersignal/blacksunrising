@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	MaxSeparation = 48.0
+	// FIXME(evgenii.omelchenko): should depends on ship size
+	MaxSeparation = 64.0
 	MinSeparation = 0.0
 )
 
