@@ -1,0 +1,375 @@
+//kage:unit pixels
+
+package main
+
+var Time float
+var CameraPosition vec2
+
+func rot(a float) mat2 {
+	s := sin(a)
+	c := cos(a)
+	return mat2(
+		vec2(c, s),
+		vec2(-s, c),
+	)
+}
+
+func hash11(p float) float {
+	p = fract(p * 0.1031)
+	p *= p + 33.33
+	p *= p + p
+	return fract(p)
+}
+
+func hash21(p vec2) float {
+	p3 := fract(vec3(p.x, p.y, p.x) * 0.1031)
+	p3 += dot(p3, vec3(p3.y, p3.z, p3.x)+33.33)
+	return fract((p3.x + p3.y) * p3.z)
+}
+
+func hash22(p vec2) vec2 {
+	p3 := fract(vec3(p.x, p.y, p.x) * vec3(0.1031, 0.1030, 0.0973))
+	p3 += dot(p3, vec3(p3.y, p3.z, p3.x)+33.33)
+	return fract((vec2(p3.x, p3.x) + vec2(p3.y, p3.z)) * vec2(p3.z, p3.y))
+}
+
+func noise(p vec2) float {
+	i := floor(p)
+	f := fract(p)
+
+	a := hash21(i)
+	b := hash21(i + vec2(1.0, 0.0))
+	c := hash21(i + vec2(0.0, 1.0))
+	d := hash21(i + vec2(1.0, 1.0))
+
+	u := f * f * (3.0 - 2.0*f)
+
+	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
+}
+
+func fbm(p vec2) float {
+	v := float(0.0)
+	a := float(0.5)
+
+	for i := 0; i < 6; i++ {
+		v += noise(p) * a
+		p = rot(0.52)*p*2.02 + vec2(13.7, 9.2)
+		a *= 0.5
+	}
+
+	return v
+}
+
+func fbmStars(p vec2) float {
+	v := float(0.0)
+	a := float(0.5)
+
+	for i := 0; i < 5; i++ {
+		v += noise(p) * a
+		p = p*2.02 + vec2(17.1, 9.3)
+		a *= 0.5
+	}
+
+	return v
+}
+
+func ridgedFbm(p vec2) float {
+	v := float(0.0)
+	a := float(0.5)
+
+	for i := 0; i < 5; i++ {
+		n := noise(p)
+		n = 1.0 - abs(n*2.0-1.0)
+		v += n * a
+		p = rot(0.43)*p*2.11 + vec2(5.4, 15.8)
+		a *= 0.55
+	}
+
+	return v
+}
+
+func applyParallax(baseUV vec2, cameraOffset vec2, parallax float, zoomFactor float) vec2 {
+	uv := baseUV * zoomFactor
+	uv -= cameraOffset * parallax
+	return uv
+}
+
+func srgbToLinear(c vec3) vec3 {
+	return pow(c, vec3(2.2))
+}
+
+func linearToSrgb(c vec3) vec3 {
+	return pow(max(c, vec3(0.0)), vec3(1.0/2.2))
+}
+
+func linearSrgbToOklab(c vec3) vec3 {
+	l := 0.4122214708*c.r + 0.5363325363*c.g + 0.0514459929*c.b
+	m := 0.2119034982*c.r + 0.6806995451*c.g + 0.1073969566*c.b
+	s := 0.0883024619*c.r + 0.2817188376*c.g + 0.6299787005*c.b
+
+	l_ := pow(l, 1.0/3.0)
+	m_ := pow(m, 1.0/3.0)
+	s_ := pow(s, 1.0/3.0)
+
+	return vec3(
+		0.2104542553*l_+0.7936177850*m_-0.0040720468*s_,
+		1.9779984951*l_-2.4285922050*m_+0.4505937099*s_,
+		0.0259040371*l_+0.7827717662*m_-0.8086757660*s_,
+	)
+}
+
+func oklabToLinearSrgb(c vec3) vec3 {
+	l_ := c.x + 0.3963377774*c.y + 0.2158037573*c.z
+	m_ := c.x - 0.1055613458*c.y - 0.0638541728*c.z
+	s_ := c.x - 0.0894841775*c.y - 1.2914855480*c.z
+
+	l := l_ * l_ * l_
+	m := m_ * m_ * m_
+	s := s_ * s_ * s_
+
+	return vec3(
+		4.0767416621*l-3.3077115913*m+0.2309699292*s,
+		-1.2684380046*l+2.6097574011*m-0.3413193965*s,
+		-0.0041960863*l-0.7034186147*m+1.7076147010*s,
+	)
+}
+
+func starColor(t float) vec3 {
+	warm := vec3(1.00, 0.87, 0.72)
+	mid := vec3(1.00, 0.97, 0.93)
+	cool := vec3(0.72, 0.84, 1.00)
+
+	if t < 0.5 {
+		return mix(warm, mid, smoothstep(0.0, 0.5, t))
+	}
+	return mix(mid, cool, smoothstep(0.5, 1.0, t))
+}
+
+func baseStars(uv vec2) vec3 {
+	const baseStarDensity = 0.022
+	const baseStarScale = 52.0
+	const baseStarGlow = 0.55
+	const tau = 6.28318530718
+
+	p := uv * baseStarScale
+	id := floor(p)
+	gv := fract(p) - 0.5
+
+	rnd := hash21(id + 3.17)
+	spawn := smoothstep(1.0-baseStarDensity, 1.0, rnd)
+
+	offs := (hash22(id+9.41) - 0.5) * 0.78
+	dxy := gv - offs
+	d := length(dxy)
+
+	sizeRnd := hash21(id + 17.3)
+	brightRnd := hash21(id + 27.9)
+	tempRnd := hash21(id + 41.7)
+
+	coreRadius := mix(0.015, 0.050, sizeRnd*sizeRnd)
+	glowRadius := coreRadius * mix(3.0, 5.8, brightRnd)
+
+	core := smoothstep(coreRadius, 0.0, d)
+	glow := smoothstep(glowRadius, 0.0, d)
+
+	twinkle := 1.0 + sin(Time*0.35+hash21(id+57.2)*tau)*0.06
+
+	col := starColor(tempRnd)
+	intensity := spawn * (core + glow*baseStarGlow) * twinkle
+	intensity *= mix(0.40, 1.25, brightRnd*brightRnd)
+
+	return col * intensity
+}
+
+func starLayer(uv vec2, scale float, density float, seed float, timeMul float) vec3 {
+	const tau = 6.28318530718
+	const twinkleSpeed = 0.8
+	const twinkleAmount = 0.18
+	const clusterScale = 0.22
+	const clusterStrength = 0.55
+	const glowStrength = 0.45
+
+	p := uv * scale
+	id := floor(p)
+	gv := fract(p) - 0.5
+
+	cluster := mix(1.0, fbmStars(id*clusterScale+vec2(seed)), clusterStrength)
+	localDensity := density * mix(0.55, 1.35, cluster)
+
+	rnd := hash21(id + vec2(seed))
+	spawn := smoothstep(1.0-localDensity, 1.0, rnd)
+
+	offs := (hash22(id+vec2(seed*1.37)) - 0.5) * 0.75
+	dxy := gv - offs
+	d := length(dxy)
+
+	sizeRnd := hash21(id + vec2(seed*3.1))
+	brightRnd := hash21(id + vec2(seed*5.7))
+	tempRnd := hash21(id + vec2(seed*8.9))
+
+	coreRadius := mix(0.018, 0.065, sizeRnd*sizeRnd)
+	glowRadius := coreRadius * mix(2.8, 5.5, brightRnd)
+
+	core := smoothstep(coreRadius, 0.0, d)
+	glow := smoothstep(glowRadius, 0.0, d)
+
+	sparkle := float(0.0)
+	if brightRnd > 0.82 {
+		crossA := smoothstep(0.02, 0.0, abs(dxy.x)) * smoothstep(glowRadius, 0.0, abs(dxy.y))
+		crossB := smoothstep(0.02, 0.0, abs(dxy.y)) * smoothstep(glowRadius, 0.0, abs(dxy.x))
+		sparkle = (crossA + crossB) * 0.22
+	}
+
+	twinklePhase := hash21(id+vec2(seed*11.3)) * tau
+	twinkle := 1.0 + sin(Time*twinkleSpeed*timeMul+twinklePhase)*twinkleAmount
+	twinkle *= mix(0.9, 1.2, brightRnd)
+
+	col := starColor(tempRnd)
+
+	intensity := spawn * twinkle * (core + glow*glowStrength + sparkle)
+	intensity *= mix(0.35, 1.4, brightRnd*brightRnd)
+
+	return col * intensity
+}
+
+func starHaze(uv vec2) vec3 {
+	large := fbmStars(uv*2.2 + vec2(3.0, 7.0))
+	mid := fbmStars(uv*6.5 - vec2(9.0, 2.0))
+	fine := fbmStars(uv*18.0 + vec2(4.0, 9.0))
+
+	band := large*0.65 + mid*0.35
+	band = smoothstep(0.45, 0.82, band)
+
+	grain := smoothstep(0.72, 1.0, fine) * 0.12
+	glow := band * 0.08
+
+	hazeCol := vec3(0.50, 0.57, 0.72) * glow
+	hazeCol += vec3(0.65, 0.68, 0.78) * grain * band
+
+	return hazeCol
+}
+
+func nebulaColorFromBase(gas float, n1 float, n2 float, n3 float, r1 float) vec3 {
+	const lightnessRange = 0.42
+	const chromaDriftA = 0.20
+	const chromaDriftB = 0.60
+	const saturationGain = 1.50
+
+	baseLinear := srgbToLinear(vec3(0.25, 0.45, 0.18))
+	lab := linearSrgbToOklab(baseLinear)
+
+	lightShift := (gas - 0.35) * lightnessRange
+
+	aShift := (n2-0.5)*2.0*chromaDriftA +
+		(r1-0.5)*0.5*chromaDriftA
+
+	bShift := (n3-0.5)*2.0*chromaDriftB -
+		(n1-0.5)*0.5*chromaDriftB
+
+	nebLab := lab
+	nebLab.x = clamp(nebLab.x+lightShift, 0.0, 1.0)
+	nebLab.y = nebLab.y*saturationGain + aShift
+	nebLab.z = nebLab.z*saturationGain + bShift
+
+	col := oklabToLinearSrgb(nebLab)
+
+	hi := smoothstep(0.85, 1.35, gas+n3*0.20)
+	col = mix(col, vec3(1.0, 0.96, 0.92), hi*0.25)
+
+	shadow := smoothstep(0.15, 0.55, gas) * (1.0 - smoothstep(0.55, 1.05, gas))
+	col = mix(col*0.6, col, smoothstep(0.0, 0.3, shadow))
+
+	return max(col, vec3(0.0))
+}
+
+func nebula(uv vec2, t float) vec3 {
+	const nebulaDensity = 0.95
+	const nebulaMotion = 0.01
+	const nebulaContrast = 5.65
+
+	p := uv
+	q := uv * 1.4
+
+	n1 := fbm(p*1.4 + vec2(t*nebulaMotion, -t*nebulaMotion*0.7))
+	n2 := fbm(q*2.2 - vec2(t*nebulaMotion*0.6, t*nebulaMotion*0.4))
+	r1 := ridgedFbm(p*1.1 - vec2(t*0.03, -t*0.02))
+
+	warp := vec2(
+		fbm(p*1.8+vec2(4.2, 1.3)+vec2(t*0.03)),
+		fbm(p*1.8+vec2(1.7, 8.2)-vec2(t*0.025)),
+	) - 0.5
+
+	n3 := fbm((p+warp*0.9)*3.0 + 12.0)
+
+	gas := n1*0.55 + n2*0.25 + r1*0.35 + n3*0.4
+	gas = pow(max(gas, 0.0), nebulaContrast)
+	gas *= nebulaDensity
+
+	col := nebulaColorFromBase(gas, n1, n2, n3, r1)
+
+	dust := ridgedFbm(p*3.8 + warp*2.0 - vec2(t*0.02))
+	dust = smoothstep(0.45, 0.85, dust) * 0.35
+	col *= 1.0 - dust*0.85
+
+	alpha := smoothstep(0.18, 0.95, gas)
+	return mix(vec3(0.0), col, alpha)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	const nebulaZoom = 1.85
+
+	const densityFar = 0.020
+	const densityMid = 0.010
+	const densityNear = 0.0035
+
+	const scaleFar = 38.0
+	const scaleMid = 72.0
+	const scaleNear = 130.0
+
+	const parallaxHaze = 0.16
+	const parallaxFar = 0.10
+	const parallaxMid = 0.24
+	const parallaxNear = 0.55
+
+	const zoomHaze = 0.92
+	const zoomFar = 1.00
+	const zoomMid = 1.08
+	const zoomNear = 1.20
+
+	bgColor := vec3(0.008, 0.010, 0.018)
+
+	resolution := imageDstSize()
+	baseUV := (dstPos.xy - 0.5*resolution) / resolution.y
+
+	t := Time * 0.01
+	cameraOffset := CameraPosition + vec2(t * 0.2, t * 0.3)
+	col := bgColor
+
+	col += baseStars(baseUV)
+
+	nebulaUV := baseUV * nebulaZoom
+	nebulaDrift := vec2(t*0.01, sin(t*0.17)*0.02)
+	nebulaUV += nebulaDrift / nebulaZoom
+	col += nebula(nebulaUV, t)
+
+	uvHaze := applyParallax(baseUV, cameraOffset, parallaxHaze, zoomHaze)
+	uvFar := applyParallax(baseUV, cameraOffset, parallaxFar, zoomFar)
+	uvMid := applyParallax(baseUV, cameraOffset, parallaxMid, zoomMid)
+	uvNear := applyParallax(baseUV, cameraOffset, parallaxNear, zoomNear)
+
+	col += starHaze(uvHaze)
+	col += starLayer(uvFar, scaleFar, densityFar, 1.0, 0.7)
+	col += starLayer(uvMid, scaleMid, densityMid, 7.0, 1.0)
+	col += starLayer(uvNear, scaleNear, densityNear, 13.0, 1.25)
+
+	lum := dot(col, vec3(0.299, 0.587, 0.114))
+	col += smoothstep(0.8, 1.4, lum) * 0.03
+
+	vignette := 1.0 - dot(baseUV*0.85, baseUV*0.85)
+	vignette = clamp(vignette, 0.0, 1.0)
+	col *= 0.45 + 0.55*vignette
+
+	col = pow(max(col, vec3(0.0)), vec3(0.95))
+
+	return vec4(col, 1.0)
+}

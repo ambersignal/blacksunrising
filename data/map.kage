@@ -1,0 +1,106 @@
+//kage:unit pixels
+
+package main
+
+var Time float
+var Size vec2 // размер области рендера в пикселях
+
+func sdBox(p vec2, b vec2) float {
+	d := abs(p) - b
+	return length(max(d, vec2(0.0, 0.0))) + min(max(d.x, d.y), 0.0)
+}
+
+func rectFill(p vec2, soft float) float {
+	d := sdBox(p, vec2(0.5, 0.5))
+	return smoothstep(soft, -soft, d)
+}
+
+func lineGlow(d float, width float, glowStrength float, glowFalloff float) float {
+	core := smoothstep(width, 0.0, d)
+	glow := exp(-max(d, 0.0)*glowFalloff) * glowStrength
+	return core + glow
+}
+
+// Один контур, не кольцо
+func boxOutline(p vec2) float {
+	return abs(sdBox(p, vec2(0.5, 0.5)))
+}
+
+// Линия на позиции coord в диапазоне [0..1]
+func axisLine(x float, coord float, width float) float {
+	return smoothstep(width, 0.0, abs(x-coord))
+}
+
+// level = 1 -> 2x2
+// level = 2 -> 4x4
+// level = 3 -> 8x8
+// level = 4 -> 16x16
+func gridLevel(p vec2, level float, width float) float {
+	inside := rectFill(p, 0.001)
+	uv := p + vec2(0.5, 0.5)
+
+	if uv.x <= 0.0 || uv.x >= 1.0 || uv.y <= 0.0 || uv.y >= 1.0 {
+		return 0.0
+	}
+
+	cells := exp2(level)
+	v := 0.0
+
+	for i := 1; i < 16; i++ {
+		fi := float(i)
+		if fi >= cells {
+			break
+		}
+
+		coord := fi / cells
+		lx := axisLine(uv.x, coord, width)
+		ly := axisLine(uv.y, coord, width)
+
+		v = max(v, lx)
+		v = max(v, ly)
+	}
+
+	return v * inside
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	uv := srcPos / Size
+	p := uv - vec2(0.5, 0.5)
+	p.x *= Size.x / Size.y
+
+	col := vec3(0.0, 0.0, 0.0)
+
+	borderD := boxOutline(p)
+	border := lineGlow(borderD, 0.0022, 0.55, 50.0)
+
+	fill := rectFill(p, 0.008)
+	centerFade := 1.0 - smoothstep(0.0, 0.55, length(p))
+	fillGlow := fill * (0.10 + 0.06*centerFade)
+
+	// --------------------------------------------------
+	// ИЕРАРХИЧЕСКАЯ СЕТКА
+	// --------------------------------------------------
+	g1 := gridLevel(p, 1.0, 0.0045) // 2x2
+	g2 := gridLevel(p, 2.0, 0.0060) // 4x4
+	g3 := gridLevel(p, 3.0, 0.0058) // 8x8
+	g4 := gridLevel(p, 4.0, 0.0050) // 16x16
+
+	baseColor := vec3(0.15, 0.65, 1.25)
+	hotColor := vec3(0.72, 0.93, 1.95)
+
+	col += baseColor * fillGlow
+	col += mix(baseColor, hotColor, clamp(border, 0.0, 1.0)) * border
+
+	col += hotColor * g1 * 0.22
+	col += baseColor * g2 * 0.11
+	col += baseColor * g3 * 0.045
+	col += baseColor * g4 * 0.020
+
+	outerGlow := exp(-max(sdBox(p, vec2(0.5, 0.5)), 0.0)*14.0) * 0.06
+	col += baseColor * outerGlow
+
+	flicker := 0.994 + 0.006*sin(Time*6.0)
+	col *= flicker
+
+	return vec4(col, 1.0)
+}

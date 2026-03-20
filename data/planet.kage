@@ -1,0 +1,183 @@
+//kage:unit pixels
+package main
+
+var Time float
+var Size vec2
+
+const NUM_NOISE_OCTAVES = 8
+
+const pi = 3.1415926535
+const inf = 9999999.9
+
+func fract(x float) float {
+	return x - floor(x)
+}
+
+func hash(p float) float {
+	p = fract(p * 0.011)
+	p *= p + 7.5
+	p *= p + p
+	return fract(p)
+}
+
+func noise(x vec3) float {
+	step := vec3(110.0, 241.0, 171.0)
+	i := floor(x)
+	f := vec3(fract(x.x), fract(x.y), fract(x.z))
+	n := dot(i, step)
+	u := f * f * (vec3(3.0) - 2.0*f)
+
+	return mix(
+		mix(
+			mix(
+				hash(n+dot(step, vec3(0.0, 0.0, 0.0))),
+				hash(n+dot(step, vec3(1.0, 0.0, 0.0))),
+				u.x,
+			),
+			mix(
+				hash(n+dot(step, vec3(0.0, 1.0, 0.0))),
+				hash(n+dot(step, vec3(1.0, 1.0, 0.0))),
+				u.x,
+			),
+			u.y,
+		),
+		mix(
+			mix(
+				hash(n+dot(step, vec3(0.0, 0.0, 1.0))),
+				hash(n+dot(step, vec3(1.0, 0.0, 1.0))),
+				u.x,
+			),
+			mix(
+				hash(n+dot(step, vec3(0.0, 1.0, 1.0))),
+				hash(n+dot(step, vec3(1.0, 1.0, 1.0))),
+				u.x,
+			),
+			u.y,
+		),
+		u.z,
+	)
+}
+
+func fbm(x vec3) float {
+	v := 0.0
+	a := 0.5
+	shift := vec3(100.0, 100.0, 100.0)
+	for i := 0; i < NUM_NOISE_OCTAVES; i++ {
+		v += a * noise(x)
+		x = x*2.0 + shift
+		a *= 0.5
+	}
+	return v
+}
+
+func square(x float) float {
+	return x * x
+}
+
+func infIfNegative(x float) float {
+	if x >= 0.0 {
+		return x
+	}
+	return inf
+}
+
+// C = sphere center, r = sphere radius, P = ray origin, w = ray direction
+func intersectSphere(C vec3, P vec3, w vec3) float {
+	v := P - C
+	b := -dot(w, v)
+	c := dot(v, v) - 1
+	d := square(b) - c
+	if d < 0.0 {
+		return inf
+	}
+	dsqrt := sqrt(d)
+	return min(infIfNegative(b-dsqrt), infIfNegative(b+dsqrt))
+}
+
+func max3(v vec3) float {
+	return max(max(v.x, v.y), v.z)
+}
+
+func rotateY(p vec3, a float) vec3 {
+	c := cos(a)
+	s := sin(a)
+	
+	return vec3(
+		c*p.x+s*p.z,
+		p.y,
+		-s*p.x+c*p.z,
+	)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	q := vec3(0.0, 0.0, 0.0)
+	r := vec3(0.0, 0.0, 0.0)
+	v := 0.0
+	outColor := vec3(0.0, 0.0, 0.0)
+
+	theta := Time * 0.15
+	verticalFieldOfView := 25.0 * pi / 180.0
+
+	P := vec3(0.0, 0.0, 5.0)
+
+	uv := (srcPos / Size) * 2.0 - vec2(1.0)
+	uv.x *= Size.x / Size.y
+	
+	w := normalize(vec3(
+		uv.x,
+		uv.y,
+		-1.0/tan(verticalFieldOfView/2.0),
+	))
+
+	t := intersectSphere(vec3(0.0, 0.0, 0.0), P, w)
+
+	if t >= inf {
+		return vec4(0.0, 0.0, 0.0, 0.0)
+	}
+
+	X := P + w*t
+	X = rotateY(X, theta)
+
+	q = vec3(
+		fbm(X+vec3(0.025*Time, 0.025*Time, 0.025*Time)),
+		fbm(X),
+		fbm(X),
+	)
+
+	r = vec3(
+		fbm(X+1.0*q+vec3(0.01*Time, 0.01*Time, 0.01*Time)),
+		fbm(X+q),
+		fbm(X+q),
+	)
+
+	v = fbm(X + 5.0*r + vec3(Time*0.005, Time*0.005, Time*0.005))
+
+	colTop := vec3(1.0, 1.0, 1.0)
+	colBot := vec3(0.0, 0.0, 0.0)
+	colMid1 := vec3(0.1, 0.2, 0.0)
+	colMid2 := vec3(0.7, 0.4, 0.3)
+	colMid3 := vec3(1.0, 0.4, 0.2)
+
+	colMid := mix(colMid1, colMid2, clamp(r, vec3(0.0), vec3(1.0)))
+	colMid = mix(colMid, colMid3, clamp(q, vec3(0.0), vec3(1.0)))
+
+	pos := v*2.0 - 1.0
+	outColor = mix(colMid, colTop, clamp(vec3(pos), vec3(0.0), vec3(1.0)))
+	outColor = mix(outColor, colBot, clamp(vec3(-pos), vec3(0.0), vec3(1.0)))
+
+	m := max3(outColor)
+	if m > 0.0 {
+		outColor /= m
+	}
+
+	lightness := clamp(0.4*pow(v, 3.0)+pow(v, 2.0)+0.5*v, 0.0, 1.0)*0.9 + 0.1
+	outColor *= lightness
+
+	diffuse := max(0.0, dot(P+w*t, vec3(1.0, sqrt(0.5), 1.0)))
+	ambient := 0.1
+	outColor *= clamp(diffuse+ambient, 0.0, 1.0)
+
+	outColor *= (P + w*t).z * 2.0
+
+	return vec4(outColor, 1.0)
+}
